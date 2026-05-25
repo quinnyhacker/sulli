@@ -91,7 +91,6 @@ export default function ProfileSetup() {
         Alert.alert('Error', JSON.stringify(error));
         setLoading(false);
       } else {
-        await supabase.auth.refreshSession();
         router.replace('/(tabs)');
       }
     } catch (e: any) {
