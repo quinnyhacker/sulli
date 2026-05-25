@@ -1,26 +1,86 @@
-import { useRef, useState } from 'react';
-import { Animated, Dimensions, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRouter } from 'expo-router';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Animated, Dimensions, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../supabase';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
-const profiles = [
-  { name: 'Alex', age: 31, dogName: 'Biscuit', dogBreed: 'Golden Retriever, 3y', bio: 'Overland Park native. We hit Shawnee Mission every Sunday ☀️', tags: ['Dog parks', 'Fetch', 'Patios'], emoji: '🐕', distance: '0.8 mi away' },
-  { name: 'Jordan', age: 28, dogName: 'Mochi', dogBreed: 'Toy Poodle, 2y', bio: 'Brookside coffee and weekend trails. Mochi thinks she\'s a duchess 👑', tags: ['Off-leash', 'Patios', 'Small dogs'], emoji: '🐩', distance: '2.1 mi away' },
-  { name: 'Sam', age: 34, dogName: 'Pretzel', dogBreed: 'Dachshund, 5y', bio: 'Love long walks along the KC riverfront. Pretzel is very opinionated 🌭', tags: ['Walks', 'Cafés', 'City dogs'], emoji: '🐾', distance: '1.4 mi away' },
-  { name: 'Riley', age: 27, dogName: 'Waffle', dogBreed: 'Corgi, 1y', bio: 'New to KC, looking to explore with Waffle and meet good people 🧇', tags: ['Explorer', 'Patios', 'Puppies'], emoji: '🐶', distance: '3.2 mi away' },
-  { name: 'Casey', age: 30, dogName: 'Duke', dogBreed: 'Lab Mix, 4y', bio: 'Weekend hiker and craft beer fan. Duke is friendly with everyone 🍺', tags: ['Hiking', 'Breweries', 'Big dogs'], emoji: '🦮', distance: '1.9 mi away' },
-];
-
 export default function HomeScreen() {
+  const [profiles, setProfiles] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchName, setMatchName] = useState('');
   const [showMatch, setShowMatch] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const position = useRef(new Animated.ValueXY()).current;
+  const router = useRouter();
 
   const rotate = position.x.interpolate({ inputRange: [-SCREEN_WIDTH / 2, 0, SCREEN_WIDTH / 2], outputRange: ['-10deg', '0deg', '10deg'] });
   const likeOpacity = position.x.interpolate({ inputRange: [0, SCREEN_WIDTH / 4], outputRange: [0, 1] });
   const nopeOpacity = position.x.interpolate({ inputRange: [-SCREEN_WIDTH / 4, 0], outputRange: [1, 0] });
+
+  useEffect(() => {
+    loadProfiles();
+  }, []);
+
+  const loadProfiles = async () => {
+    setLoading(true);
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+    setCurrentUser(user);
+
+    const { data: myProfile } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('id', user.id)
+      .single();
+
+    const { data: swipedIds } = await supabase
+      .from('swipes')
+      .select('swiped_id')
+      .eq('swiper_id', user.id);
+
+    const excluded = [user.id, ...(swipedIds?.map((s: any) => s.swiped_id) || [])];
+
+    const { data: potentials } = await supabase
+      .from('profiles')
+      .select('*')
+      .not('id', 'in', `(${excluded.join(',')})`)
+      .limit(20);
+
+    setProfiles(potentials || []);
+    setLoading(false);
+  };
+
+  const recordSwipe = async (direction: string, swipedId: string) => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.from('swipes').insert({
+      swiper_id: user.id,
+      swiped_id: swipedId,
+      direction,
+    });
+
+    if (direction === 'right') {
+      const { data: theirSwipe } = await supabase
+        .from('swipes')
+        .select('id')
+        .eq('swiper_id', swipedId)
+        .eq('swiped_id', user.id)
+        .eq('direction', 'right')
+        .single();
+
+      if (theirSwipe) {
+        await supabase.from('matches').insert({
+          user1_id: user.id,
+          user2_id: swipedId,
+        });
+        return true;
+      }
+    }
+    return false;
+  };
 
   const panResponder = useRef(PanResponder.create({
     onStartShouldSetPanResponder: () => true,
@@ -35,20 +95,35 @@ export default function HomeScreen() {
   })).current;
 
   const swipeRight = () => {
-    Animated.timing(position, { toValue: { x: SCREEN_WIDTH + 100, y: 0 }, duration: 300, useNativeDriver: true }).start(() => {
-      setMatchName(profiles[currentIndex].name);
-      setShowMatch(true);
+    const profile = profiles[currentIndex];
+    Animated.timing(position, { toValue: { x: SCREEN_WIDTH + 100, y: 0 }, duration: 300, useNativeDriver: true }).start(async () => {
+      const isMatch = await recordSwipe('right', profile.id);
+      if (isMatch) {
+        setMatchName(profile.name);
+        setShowMatch(true);
+      }
       position.setValue({ x: 0, y: 0 });
       setCurrentIndex(prev => prev + 1);
     });
   };
 
   const swipeLeft = () => {
-    Animated.timing(position, { toValue: { x: -SCREEN_WIDTH - 100, y: 0 }, duration: 300, useNativeDriver: true }).start(() => {
+    const profile = profiles[currentIndex];
+    Animated.timing(position, { toValue: { x: -SCREEN_WIDTH - 100, y: 0 }, duration: 300, useNativeDriver: true }).start(async () => {
+      await recordSwipe('left', profile.id);
       position.setValue({ x: 0, y: 0 });
       setCurrentIndex(prev => prev + 1);
     });
   };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, { alignItems: 'center', justifyContent: 'center' }]}>
+        <ActivityIndicator size="large" color="#8B5E3C" />
+        <Text style={{ color: '#8C7B68', marginTop: 12 }}>finding pups near you...</Text>
+      </View>
+    );
+  }
 
   if (showMatch) {
     return (
@@ -63,14 +138,14 @@ export default function HomeScreen() {
     );
   }
 
-  if (currentIndex >= profiles.length) {
+  if (profiles.length === 0 || currentIndex >= profiles.length) {
     return (
       <View style={styles.emptyScreen}>
         <Text style={styles.emptyEmoji}>🐾</Text>
-        <Text style={styles.emptyTitle}>you've seen everyone!</Text>
+        <Text style={styles.emptyTitle}>no more pups nearby!</Text>
         <Text style={styles.emptySub}>Check back later for more dog lovers in KC</Text>
-        <TouchableOpacity style={styles.matchButton} onPress={() => setCurrentIndex(0)}>
-          <Text style={styles.matchButtonText}>start over</Text>
+        <TouchableOpacity style={styles.matchButton} onPress={loadProfiles}>
+          <Text style={styles.matchButtonText}>refresh</Text>
         </TouchableOpacity>
       </View>
     );
@@ -91,7 +166,7 @@ export default function HomeScreen() {
       {nextProfile && (
         <View style={[styles.card, styles.cardBack]}>
           <View style={styles.cardPhoto}>
-            <Text style={styles.cardEmoji}>{nextProfile.emoji}</Text>
+            <Text style={styles.cardEmoji}>{nextProfile.dog_emoji || '🐕'}</Text>
           </View>
         </View>
       )}
@@ -106,12 +181,12 @@ export default function HomeScreen() {
           <Text style={styles.passText}>PASS</Text>
         </Animated.View>
         <View style={styles.cardPhoto}>
-          <Text style={styles.cardEmoji}>{profile.emoji}</Text>
+          <Text style={styles.cardEmoji}>{profile.dog_emoji || '🐕'}</Text>
           <View style={styles.cardBadge}>
-            <Text style={styles.cardBadgeText}>🐶 {profile.dogName}</Text>
+            <Text style={styles.cardBadgeText}>🐶 {profile.dog_name}</Text>
           </View>
           <View style={styles.cardDistance}>
-            <Text style={styles.cardDistanceText}>{profile.distance}</Text>
+            <Text style={styles.cardDistanceText}>{profile.neighborhood}</Text>
           </View>
         </View>
         <View style={styles.cardBody}>
@@ -119,12 +194,11 @@ export default function HomeScreen() {
             <Text style={styles.cardName}>{profile.name}</Text>
             <Text style={styles.cardAge}>{profile.age}</Text>
           </View>
-          <Text style={styles.cardDog}>🐶 {profile.dogName} · {profile.dogBreed}</Text>
-          <Text style={styles.cardBio}>{profile.bio}</Text>
+          <Text style={styles.cardDog}>🐶 {profile.dog_name} · {profile.dog_breed}, {profile.dog_age}y</Text>
+          <Text style={styles.cardBio}>{profile.bio || 'Dog lover in KC 🐾'}</Text>
           <View style={styles.tagsRow}>
-            {profile.tags.map((t, i) => (
-              <View key={i} style={styles.tag}><Text style={styles.tagText}>{t}</Text></View>
-            ))}
+            <View style={styles.tag}><Text style={styles.tagText}>{profile.neighborhood}</Text></View>
+            <View style={styles.tag}><Text style={styles.tagText}>{profile.dog_breed}</Text></View>
           </View>
         </View>
       </Animated.View>
