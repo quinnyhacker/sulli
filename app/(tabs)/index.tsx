@@ -12,7 +12,6 @@ const profiles = [
 ];
 
 export default function HomeScreen() {
-  const [showSplash, setShowSplash] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [matchName, setMatchName] = useState('');
   const [showMatch, setShowMatch] = useState(false);
@@ -54,19 +53,6 @@ export default function HomeScreen() {
     });
   };
 
-  if (showSplash) {
-    return (
-      <View style={styles.splash}>
-        <Text style={styles.splashPaw}>🐾</Text>
-        <Text style={styles.splashLogo}>sulli</Text>
-        <Text style={styles.splashTagline}>dates with your best friend</Text>
-        <TouchableOpacity style={styles.splashButton} onPress={() => setShowSplash(false)}>
-          <Text style={styles.splashButtonText}>get started</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   if (showMatch) {
     return (
       <View style={styles.matchScreen}>
@@ -86,8 +72,8 @@ export default function HomeScreen() {
         <Text style={styles.emptyEmoji}>🐾</Text>
         <Text style={styles.emptyTitle}>you've seen everyone!</Text>
         <Text style={styles.emptySub}>Check back later for more dog lovers in KC</Text>
-        <TouchableOpacity style={styles.splashButton} onPress={() => setCurrentIndex(0)}>
-          <Text style={styles.splashButtonText}>start over</Text>
+        <TouchableOpacity style={styles.matchButton} onPress={() => setCurrentIndex(0)}>
+          <Text style={styles.matchButtonText}>start over</Text>
         </TouchableOpacity>
       </View>
     );
@@ -106,12 +92,6 @@ export default function HomeScreen() {
         <View style={[styles.card, styles.cardBack]}>
           <View style={styles.cardPhoto}>
             <Text style={styles.cardEmoji}>{nextProfile.emoji}</Text>
-          </View>
-          <View style={styles.cardBody}>
-            <View style={styles.cardNameRow}>
-              <Text style={styles.cardName}>{nextProfile.name}</Text>
-              <Text style={styles.cardAge}>{nextProfile.age}</Text>
-            </View>
           </View>
         </View>
       )}
@@ -162,12 +142,6 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  splash: { flex: 1, backgroundColor: '#8B5E3C', alignItems: 'center', justifyContent: 'center', gap: 12 },
-  splashPaw: { fontSize: 60 },
-  splashLogo: { fontSize: 56, color: 'white', fontWeight: '300' },
-  splashTagline: { fontSize: 14, color: 'rgba(255,255,255,0.7)', letterSpacing: 2 },
-  splashButton: { marginTop: 32, backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 40, paddingVertical: 14, borderRadius: 30, borderWidth: 1, borderColor: 'rgba(255,255,255,0.4)' },
-  splashButtonText: { color: 'white', fontSize: 16, letterSpacing: 1 },
   matchScreen: { flex: 1, backgroundColor: '#8B5E3C', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 },
   matchEmoji: { fontSize: 48 },
   matchTitle: { fontSize: 42, color: 'white', fontWeight: '300', fontStyle: 'italic' },
