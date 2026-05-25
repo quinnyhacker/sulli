@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Animated, Dimensions, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { supabase } from '../../supabase';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 
@@ -27,13 +28,9 @@ export default function HomeScreen() {
       position.setValue({ x: gesture.dx, y: gesture.dy });
     },
     onPanResponderRelease: (_, gesture) => {
-      if (gesture.dx > 120) {
-        swipeRight();
-      } else if (gesture.dx < -120) {
-        swipeLeft();
-      } else {
-        Animated.spring(position, { toValue: { x: 0, y: 0 }, useNativeDriver: true }).start();
-      }
+      if (gesture.dx > 120) swipeRight();
+      else if (gesture.dx < -120) swipeLeft();
+      else Animated.spring(position, { toValue: { x: 0, y: 0 }, useNativeDriver: true }).start();
     },
   })).current;
 
@@ -86,6 +83,9 @@ export default function HomeScreen() {
     <View style={styles.container}>
       <View style={styles.topNav}>
         <Text style={styles.navLogo}>sulli 🐾</Text>
+        <TouchableOpacity onPress={() => supabase.auth.signOut()}>
+          <Text style={styles.signOut}>sign out</Text>
+        </TouchableOpacity>
       </View>
 
       {nextProfile && (
@@ -153,8 +153,9 @@ const styles = StyleSheet.create({
   emptyTitle: { fontSize: 24, color: '#2C2016', fontWeight: '300' },
   emptySub: { fontSize: 14, color: '#8C7B68', textAlign: 'center', lineHeight: 22 },
   container: { flex: 1, backgroundColor: '#F7F2EA' },
-  topNav: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 8 },
+  topNav: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   navLogo: { fontSize: 28, color: '#8B5E3C', fontWeight: '300' },
+  signOut: { fontSize: 12, color: '#8C7B68' },
   card: { marginHorizontal: 16, backgroundColor: 'white', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E8D5B7', position: 'absolute', left: 0, right: 0, top: 110 },
   cardBack: { top: 118, marginHorizontal: 22, opacity: 0.8 },
   cardPhoto: { height: 280, backgroundColor: '#EDE4D4', alignItems: 'center', justifyContent: 'center' },

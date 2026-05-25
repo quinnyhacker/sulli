@@ -13,7 +13,13 @@ export default function LoginScreen() {
   const handleAuth = async () => {
     setLoading(true);
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ email, password });
+      const { error } = await supabase.auth.signUp({ 
+  email, 
+  password,
+  options: {
+    emailRedirectTo: 'exp://localhost:8081'
+  }
+});
       if (error) Alert.alert('Error', error.message);
       else Alert.alert('Success!', 'Check your email to confirm your account, then log in.');
     } else {
