@@ -16,11 +16,7 @@ export default function ProfileScreen() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    const { data } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
     setLoading(false);
   };
@@ -28,12 +24,10 @@ export default function ProfileScreen() {
   const handleSignOut = async () => {
     Alert.alert('Sign out', 'Are you sure you want to sign out?', [
       { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Sign out', style: 'destructive', onPress: async () => {
-          await supabase.auth.signOut();
-          router.replace('/login');
-        }
-      }
+      { text: 'Sign out', style: 'destructive', onPress: async () => {
+        await supabase.auth.signOut();
+        router.replace('/login');
+      }}
     ]);
   };
 
@@ -59,7 +53,6 @@ export default function ProfileScreen() {
       </View>
       <ScrollView style={styles.scroll}>
 
-        {/* Profile Card */}
         <View style={styles.profileCard}>
           <View style={styles.profilePhotoRow}>
             {profile?.photos?.[0] ? (
@@ -83,7 +76,6 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {/* Edit Profile */}
         <Text style={styles.sectionLabel}>MY PROFILE</Text>
         <View style={styles.menuCard}>
           <TouchableOpacity style={styles.menuRow} onPress={() => router.push('/edit-profile')}>
@@ -93,7 +85,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Safety */}
         <Text style={styles.sectionLabel}>SAFETY</Text>
         <View style={styles.menuCard}>
           <View style={styles.safetyBanner}>
@@ -129,7 +120,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Preferences */}
         <Text style={styles.sectionLabel}>PREFERENCES</Text>
         <View style={styles.menuCard}>
           <TouchableOpacity style={styles.menuRow}>
@@ -151,7 +141,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Support */}
         <Text style={styles.sectionLabel}>SUPPORT</Text>
         <View style={styles.menuCard}>
           <TouchableOpacity style={styles.menuRow}>
@@ -166,6 +155,12 @@ export default function ProfileScreen() {
             <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
           <View style={styles.menuDivider} />
+          <TouchableOpacity style={styles.menuRow} onPress={() => router.push('/privacy')}>
+            <Text style={styles.menuIcon}>📄</Text>
+            <Text style={styles.menuText}>Privacy policy</Text>
+            <Text style={styles.menuArrow}>→</Text>
+          </TouchableOpacity>
+          <View style={styles.menuDivider} />
           <TouchableOpacity style={styles.menuRow}>
             <Text style={styles.menuIcon}>⭐</Text>
             <Text style={styles.menuText}>Rate Sulli</Text>
@@ -173,7 +168,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Account */}
         <Text style={styles.sectionLabel}>ACCOUNT</Text>
         <View style={styles.menuCard}>
           <TouchableOpacity style={styles.menuRow} onPress={handleSignOut}>
