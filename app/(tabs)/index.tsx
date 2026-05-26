@@ -138,16 +138,18 @@ if (theirSwipeCheck) {
   })).current;
 
   const swipeRight = () => {
-    const profile = profiles[currentIndex];
-    Animated.timing(position, { toValue: { x: SCREEN_WIDTH + 100, y: 0 }, duration: 300, useNativeDriver: true }).start(async () => {
-      const isMatch = await recordSwipe('right', profile.id);
-      if (isMatch) {
-        setMatchName(profile.name);
-        setShowMatch(true);
-      }
-      position.setValue({ x: 0, y: 0 });
-      setCurrentIndex(prev => prev + 1);
-    });
+  const profile = profiles[currentIndex];
+  console.log('swiping right on:', profile?.id, profile?.name);
+  Animated.timing(position, { toValue: { x: SCREEN_WIDTH + 100, y: 0 }, duration: 300, useNativeDriver: true }).start(async () => {
+    const isMatch = await recordSwipe('right', profile.id);
+    console.log('isMatch result:', isMatch);
+    if (isMatch) {
+      setMatchName(profile.name);
+      setShowMatch(true);
+    }
+    position.setValue({ x: 0, y: 0 });
+    setCurrentIndex(prev => prev + 1);
+  });
   };
 
   const swipeLeft = () => {
@@ -296,7 +298,7 @@ const styles = StyleSheet.create({
   navLogo: { fontSize: 28, color: '#8B5E3C', fontWeight: '300' },
   signOut: { fontSize: 12, color: '#8C7B68' },
   card: { position: 'absolute', left: 10, right: 10, top: 108, bottom: 30, backgroundColor: 'white', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E8D5B7' },
-  actionRow: { position: 'absolute', bottom: 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 24 },
+  actionRow: { position: 'absolute', bottom: 50, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 24 },
   photoContainer: { height: '62%', position: 'relative' },
   cardPhotoImage: { width: '100%', height: '100%' },
   cardPhoto: { height: '100%', backgroundColor: '#EDE4D4', alignItems: 'center', justifyContent: 'center' },
@@ -306,6 +308,7 @@ const styles = StyleSheet.create({
   photoDotActive: { backgroundColor: 'white', width: 18 },
   photoLeft: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '50%' },
   photoRight: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '50%' },
+  cardBack: { top: 114, left: 16, right: 16, bottom: 78, opacity: 0.85 },
   cardBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#E8D5B7' },
   cardBadgeText: { fontSize: 11, color: '#8B5E3C', fontWeight: '500' },
   cardDistance: { position: 'absolute', bottom: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
@@ -319,7 +322,6 @@ const styles = StyleSheet.create({
   tagsRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   tag: { backgroundColor: '#F7F2EA', borderWidth: 1, borderColor: '#E8D5B7', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   tagText: { fontSize: 11, color: '#8B5E3C', fontWeight: '500' },
-  actionRow: { position: 'absolute', bottom: 98, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 24 },
   actionBtn: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, backgroundColor: 'white' },
   passBtn: { borderColor: '#E8D0C8' },
   passBtnText: { fontSize: 22, color: '#C87858' },
