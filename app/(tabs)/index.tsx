@@ -46,11 +46,22 @@ export default function HomeScreen() {
 
     const excluded = [user.id, ...(swipedIds?.map((s: any) => s.swiped_id) || [])];
 
-    const { data: potentials } = await supabase
-      .from('profiles')
-      .select('*')
-      .not('id', 'in', `(${excluded.join(',')})`)
-      .limit(20);
+    const { data: myProfile } = await supabase
+  .from('profiles')
+  .select('preferred_dog_size')
+  .eq('id', user.id)
+  .single();
+
+let query = supabase
+  .from('profiles')
+  .select('*')
+  .not('id', 'in', `(${excluded.join(',')})`);
+
+if (myProfile?.preferred_dog_size && myProfile.preferred_dog_size !== 'any') {
+  query = query.eq('dog_size', myProfile.preferred_dog_size);
+}
+
+const { data: potentials } = await query.limit(20);
 
     setProfiles(potentials || []);
     setLoading(false);

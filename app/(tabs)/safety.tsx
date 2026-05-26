@@ -1,11 +1,13 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Image, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../supabase';
 
 export default function ProfileScreen() {
   const [profile, setProfile] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [showSizeModal, setShowSizeModal] = useState(false);
+  const [preferredSize, setPreferredSize] = useState('any');
   const router = useRouter();
 
   useEffect(() => {
@@ -18,6 +20,7 @@ export default function ProfileScreen() {
     if (!user) return;
     const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single();
     setProfile(data);
+    
     setLoading(false);
   };
 
@@ -134,11 +137,11 @@ export default function ProfileScreen() {
             <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
           <View style={styles.menuDivider} />
-          <TouchableOpacity style={styles.menuRow}>
-            <Text style={styles.menuIcon}>🐕</Text>
-            <Text style={styles.menuText}>Dog size preference</Text>
-            <Text style={styles.menuArrow}>→</Text>
-          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuRow} onPress={() => setShowSizeModal(true)}>
+  <Text style={styles.menuIcon}>🐕</Text>
+  <Text style={styles.menuText}>Dog size preference</Text>
+  <Text style={styles.menuArrow}>{preferredSize === 'any' ? 'No preference →' : `${preferredSize} →`}</Text>
+</TouchableOpacity>
         </View>
 
         <Text style={styles.sectionLabel}>SUPPORT</Text>
@@ -186,6 +189,31 @@ export default function ProfileScreen() {
         <Text style={styles.version}>sulli v1.0 · made with 🐾 in Kansas City</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
+      <Modal visible={showSizeModal} animationType="slide" transparent>
+  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+    <View style={{ backgroundColor: 'white', borderRadius: 24, padding: 24, paddingBottom: 40 }}>
+      <Text style={{ fontSize: 20, fontWeight: '300', color: '#2C2016', marginBottom: 20 }}>dog size preference</Text>
+      {['any', 'Small', 'Medium', 'Large'].map(size => (
+        <TouchableOpacity
+          key={size}
+          style={{ padding: 14, borderRadius: 12, borderWidth: 1, borderColor: preferredSize === size ? '#8B5E3C' : '#E8D5B7', backgroundColor: preferredSize === size ? '#F7F2EA' : 'white', marginBottom: 8, flexDirection: 'row', alignItems: 'center', gap: 12 }}
+          onPress={async () => {
+            setPreferredSize(size);
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) await supabase.from('profiles').update({ preferred_dog_size: size }).eq('id', user.id);
+            setShowSizeModal(false);
+          }}>
+          <Text style={{ fontSize: 22 }}>{size === 'any' ? '🐾' : size === 'Small' ? '🐩' : size === 'Medium' ? '🐕' : '🦮'}</Text>
+          <Text style={{ fontSize: 15, color: '#2C2016' }}>{size === 'any' ? 'No preference' : size}</Text>
+          {preferredSize === size && <Text style={{ marginLeft: 'auto', color: '#8B5E3C' }}>✓</Text>}
+        </TouchableOpacity>
+      ))}
+      <TouchableOpacity style={{ marginTop: 8, padding: 14, alignItems: 'center' }} onPress={() => setShowSizeModal(false)}>
+        <Text style={{ color: '#8C7B68' }}>cancel</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
     </View>
   );
 }

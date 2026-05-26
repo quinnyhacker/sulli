@@ -19,6 +19,7 @@ export default function ProfileSetup() {
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const router = useRouter();
+  const [dogSize, setDogSize] = useState('Medium');
 
   const dogEmojis = ['🐕', '🐩', '🐶', '🦮', '🐾'];
 
@@ -86,6 +87,7 @@ export default function ProfileSetup() {
         dog_breed: dogBreed,
         dog_age: parseInt(dogAge),
         dog_emoji: dogEmoji,
+        dog_size: dogSize,
         photos,
       });
       if (error) {
@@ -148,6 +150,18 @@ export default function ProfileSetup() {
             <TextInput style={styles.input} value={dogBreed} onChangeText={setDogBreed} placeholder="e.g. Golden Retriever mix" placeholderTextColor="#8C7B68" />
             <Text style={styles.label}>age</Text>
             <TextInput style={styles.input} value={dogAge} onChangeText={setDogAge} placeholder="Dog's age" placeholderTextColor="#8C7B68" keyboardType="numeric" />
+            <Text style={styles.label}>dog size</Text>
+<View style={styles.emojiRow}>
+  {['Small', 'Medium', 'Large'].map(size => (
+    <TouchableOpacity
+      key={size}
+      style={[styles.emojiBtn, dogSize === size && styles.emojiBtnActive]}
+      onPress={() => setDogSize(size)}>
+      <Text style={styles.emoji}>{size === 'Small' ? '🐩' : size === 'Medium' ? '🐕' : '🦮'}</Text>
+      <Text style={{ fontSize: 10, color: dogSize === size ? '#8B5E3C' : '#8C7B68' }}>{size}</Text>
+    </TouchableOpacity>
+  ))}
+</View>
             <Text style={styles.label}>pick an emoji for your pup</Text>
             <View style={styles.emojiRow}>
               {dogEmojis.map(e => (
