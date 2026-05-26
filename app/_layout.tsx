@@ -55,6 +55,8 @@ export default function RootLayout() {
       <Stack.Screen name="chat" />
       <Stack.Screen name="edit-profile" />
       <Stack.Screen name="onboarding" />
+      <Stack.Screen name="privacy" />
+      <Stack.Screen name="venue" />
     </Stack>
   );
 }
