@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Stack, useRouter } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, View } from 'react-native';
@@ -11,9 +12,11 @@ export default function RootLayout() {
   useEffect(() => {
     const init = async () => {
       try {
+        const onboarded = await AsyncStorage.getItem('onboarded');
+        console.log('onboarded:', onboarded);
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          setTimeout(() => router.replace('/login'), 500);
+          setTimeout(() => router.replace(onboarded ? '/login' : '/onboarding'), 500);
         } else {
           const { data } = await supabase
             .from('profiles')
@@ -51,6 +54,7 @@ export default function RootLayout() {
       <Stack.Screen name="profile-setup" />
       <Stack.Screen name="chat" />
       <Stack.Screen name="edit-profile" />
+      <Stack.Screen name="onboarding" />
     </Stack>
   );
 }
