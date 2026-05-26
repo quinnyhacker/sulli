@@ -17,6 +17,7 @@ export default function ProfileSetup() {
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [done, setDone] = useState(false);
   const router = useRouter();
 
   const dogEmojis = ['🐕', '🐩', '🐶', '🦮', '🐾'];
@@ -91,13 +92,26 @@ export default function ProfileSetup() {
         Alert.alert('Error', JSON.stringify(error));
         setLoading(false);
       } else {
-        router.replace('/(tabs)');
+        setDone(true);
       }
     } catch (e: any) {
       Alert.alert('Error', e.message || JSON.stringify(e));
       setLoading(false);
     }
   };
+
+  if (done) {
+    return (
+      <View style={styles.doneScreen}>
+        <Text style={styles.doneEmoji}>🐾</Text>
+        <Text style={styles.doneTitle}>you're all set!</Text>
+        <Text style={styles.doneSub}>time to find your pup's new best friend</Text>
+        <TouchableOpacity style={styles.doneButton} onPress={() => router.replace('/(tabs)')}>
+          <Text style={styles.doneButtonText}>start exploring →</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
@@ -178,7 +192,10 @@ export default function ProfileSetup() {
             <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
               <Text style={styles.backBtnText}>← back</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.button, photos.length < 6 && styles.buttonDisabled]} onPress={saveProfile} disabled={loading || photos.length < 6}>
+            <TouchableOpacity
+              style={[styles.button, photos.length < 6 && styles.buttonDisabled]}
+              onPress={saveProfile}
+              disabled={loading || photos.length < 6}>
               <Text style={styles.buttonText}>{loading ? 'saving...' : "let's go 🐾"}</Text>
             </TouchableOpacity>
           </View>
@@ -219,4 +236,10 @@ const styles = StyleSheet.create({
   removeBtnText: { color: 'white', fontSize: 10, fontWeight: '700' },
   uploadingText: { fontSize: 13, color: '#8B5E3C', textAlign: 'center', marginBottom: 8 },
   photoCount: { fontSize: 12, color: '#8C7B68', textAlign: 'center', marginBottom: 8 },
+  doneScreen: { flex: 1, backgroundColor: '#8B5E3C', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 },
+  doneEmoji: { fontSize: 72 },
+  doneTitle: { fontSize: 36, color: 'white', fontWeight: '300', fontStyle: 'italic' },
+  doneSub: { fontSize: 14, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
+  doneButton: { marginTop: 16, backgroundColor: 'white', paddingHorizontal: 40, paddingVertical: 14, borderRadius: 30 },
+  doneButtonText: { color: '#8B5E3C', fontSize: 16, fontWeight: '500' },
 });

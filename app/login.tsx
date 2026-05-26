@@ -11,21 +11,31 @@ export default function LoginScreen() {
   const router = useRouter();
 
   const handleAuth = async () => {
+    if (!email || !password) {
+      Alert.alert('Missing fields', 'Please enter your email and password');
+      return;
+    }
     setLoading(true);
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({ 
-  email, 
-  password,
-  options: {
-    emailRedirectTo: 'exp://localhost:8081'
-  }
-});
+      const { error } = await supabase.auth.signUp({ email, password });
       if (error) Alert.alert('Error', error.message);
-      else Alert.alert('Success!', 'Check your email to confirm your account, then log in.');
+      else {
+        Alert.alert('Account created!', 'You can now sign in.');
+        setIsSignUp(false);
+      }
     } else {
-      const { error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error) Alert.alert('Error', error.message);
-      else router.replace('/(tabs)');
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        Alert.alert('Error', error.message);
+      } else {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle();
+        if (profile) router.replace('/(tabs)');
+        else router.replace('/profile-setup');
+      }
     }
     setLoading(false);
   };
@@ -35,12 +45,11 @@ export default function LoginScreen() {
       <Text style={styles.paw}>🐾</Text>
       <Text style={styles.logo}>sulli</Text>
       <Text style={styles.tagline}>dates with your best friend</Text>
-
       <View style={styles.form}>
         <TextInput
           style={styles.input}
           placeholder="Email"
-          placeholderTextColor="#8C7B68"
+          placeholderTextColor="rgba(255,255,255,0.6)"
           value={email}
           onChangeText={setEmail}
           autoCapitalize="none"
@@ -49,7 +58,7 @@ export default function LoginScreen() {
         <TextInput
           style={styles.input}
           placeholder="Password"
-          placeholderTextColor="#8C7B68"
+          placeholderTextColor="rgba(255,255,255,0.6)"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -57,7 +66,6 @@ export default function LoginScreen() {
         <TouchableOpacity style={styles.button} onPress={handleAuth} disabled={loading}>
           <Text style={styles.buttonText}>{loading ? 'loading...' : isSignUp ? 'create account' : 'sign in'}</Text>
         </TouchableOpacity>
-
         <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
           <Text style={styles.switchText}>
             {isSignUp ? 'already have an account? sign in' : "don't have an account? sign up"}
