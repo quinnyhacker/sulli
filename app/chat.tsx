@@ -115,9 +115,40 @@ const [reportReason, setReportReason] = useState('');
   };
 
   const respondToInvite = async (inviteId: string, status: string) => {
-    await supabase.from('date_invites').update({ status }).eq('id', inviteId);
-    setDateInvites(prev => prev.map(inv => inv.id === inviteId ? { ...inv, status } : inv));
-  };
+  await supabase.from('date_invites').update({ status }).eq('id', inviteId);
+  setDateInvites(prev => prev.map(inv => inv.id === inviteId ? { ...inv, status } : inv));
+  
+  if (status === 'accepted') {
+    const invite = dateInvites.find(inv => inv.id === inviteId);
+    if (!invite) return;
+    Alert.alert(
+      '🛡 Share with safety circle?',
+      `Let your trusted contacts know about your date at ${invite.venue} on ${invite.date} at ${invite.time}?`,
+      [
+        { text: 'Skip', style: 'cancel' },
+        { text: 'Send SMS', onPress: async () => {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) return;
+          const { data: contacts } = await supabase
+            .from('safety_contacts')
+            .select('*')
+            .eq('user_id', user.id)
+            .eq('enabled', true);
+          if (!contacts || contacts.length === 0) {
+            Alert.alert('No contacts', 'Add trusted contacts in your Profile settings first!');
+            return;
+          }
+          const { default: SMS } = await import('expo-sms');
+          const isAvailable = await SMS.isAvailableAsync();
+          if (!isAvailable) { Alert.alert('SMS not available'); return; }
+          const phones = contacts.map((c: any) => c.phone);
+          const message = `🐾 Sulli Safety Alert\n\nI have a date planned!\n\n📍 Where: ${invite.venue}\n📅 When: ${invite.date} at ${invite.time}\n🐕 With: ${name} & ${dogName}\n\nI'll check in after. If you don't hear from me please check on me!`;
+          await SMS.sendSMSAsync(phones, message);
+        }}
+      ]
+    );
+  }
+};
   const handleReport = async (reason: string) => {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return;

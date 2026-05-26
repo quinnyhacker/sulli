@@ -1,10 +1,12 @@
 import * as ImagePicker from 'expo-image-picker';
+import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../supabase';
 
 export default function ProfileSetup() {
+  const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [age, setAge] = useState('');
@@ -22,6 +24,15 @@ export default function ProfileSetup() {
   const [dogSize, setDogSize] = useState('Medium');
 
   const dogEmojis = ['🐕', '🐩', '🐶', '🦮', '🐾'];
+  const getLocation = async () => {
+  const { status } = await Location.requestForegroundPermissionsAsync();
+  if (status !== 'granted') {
+    Alert.alert('Location needed', 'Please allow location access to find matches near you');
+    return;
+  }
+  const loc = await Location.getCurrentPositionAsync({});
+  setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
+};
 
   const pickImage = async () => {
     if (photos.length >= 6) {
@@ -88,6 +99,8 @@ export default function ProfileSetup() {
         dog_age: parseInt(dogAge),
         dog_emoji: dogEmoji,
         dog_size: dogSize,
+        latitude: location?.latitude,
+longitude: location?.longitude,
         photos,
       });
       if (error) {
@@ -136,6 +149,9 @@ export default function ProfileSetup() {
             <TextInput style={styles.input} value={neighborhood} onChangeText={setNeighborhood} placeholder="e.g. Brookside, Overland Park..." placeholderTextColor="#8C7B68" />
             <Text style={styles.label}>about you and your pup</Text>
             <TextInput style={[styles.input, { height: 100, textAlignVertical: 'top' }]} value={bio} onChangeText={setBio} placeholder="Tell people about yourself and your dog..." placeholderTextColor="#8C7B68" multiline />
+            <TouchableOpacity style={[styles.button, { backgroundColor: location ? '#7A8C6E' : '#C8956C', marginTop: 12 }]} onPress={getLocation}>
+  <Text style={styles.buttonText}>{location ? '📍 location captured!' : '📍 get my location'}</Text>
+</TouchableOpacity>
             <TouchableOpacity style={styles.button} onPress={() => setStep(2)}>
               <Text style={styles.buttonText}>next →</Text>
             </TouchableOpacity>

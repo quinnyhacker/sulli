@@ -8,6 +8,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
   const router = useRouter();
 
   const handleAuth = async () => {
@@ -17,6 +18,11 @@ export default function LoginScreen() {
     }
     setLoading(true);
     if (isSignUp) {
+      if (!ageConfirmed) {
+        Alert.alert('Age requirement', 'You must be 18 or older to use Sulli');
+        setLoading(false);
+        return;
+      }
       const { error } = await supabase.auth.signUp({ email, password });
       if (error) Alert.alert('Error', error.message);
       else {
@@ -63,10 +69,21 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
         />
-        <TouchableOpacity style={styles.button} onPress={handleAuth} disabled={loading}>
+        {isSignUp && (
+          <TouchableOpacity style={styles.checkRow} onPress={() => setAgeConfirmed(!ageConfirmed)}>
+            <View style={[styles.checkbox, ageConfirmed && styles.checkboxActive]}>
+              {ageConfirmed && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.checkText}>I confirm I am 18 years of age or older</Text>
+          </TouchableOpacity>
+        )}
+        <TouchableOpacity
+          style={[styles.button, isSignUp && !ageConfirmed && styles.buttonDisabled]}
+          onPress={handleAuth}
+          disabled={loading || (isSignUp && !ageConfirmed)}>
           <Text style={styles.buttonText}>{loading ? 'loading...' : isSignUp ? 'create account' : 'sign in'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
+        <TouchableOpacity onPress={() => { setIsSignUp(!isSignUp); setAgeConfirmed(false); }}>
           <Text style={styles.switchText}>
             {isSignUp ? 'already have an account? sign in' : "don't have an account? sign up"}
           </Text>
@@ -83,7 +100,13 @@ const styles = StyleSheet.create({
   tagline: { fontSize: 13, color: 'rgba(255,255,255,0.7)', letterSpacing: 2, marginBottom: 48 },
   form: { width: '100%', gap: 12 },
   input: { backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 16, padding: 16, fontSize: 15, color: 'white', borderWidth: 1, borderColor: 'rgba(255,255,255,0.3)' },
+  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 4 },
+  checkbox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
+  checkboxActive: { backgroundColor: 'white', borderColor: 'white' },
+  checkmark: { color: '#8B5E3C', fontSize: 14, fontWeight: '700' },
+  checkText: { flex: 1, color: 'rgba(255,255,255,0.8)', fontSize: 12, lineHeight: 18 },
   button: { backgroundColor: 'white', borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 4 },
+  buttonDisabled: { opacity: 0.5 },
   buttonText: { color: '#8B5E3C', fontSize: 16, fontWeight: '500' },
   switchText: { color: 'rgba(255,255,255,0.7)', fontSize: 13, textAlign: 'center', marginTop: 8 },
 });
