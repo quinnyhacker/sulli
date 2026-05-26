@@ -9,6 +9,8 @@ export default function ProfileScreen() {
   const [showSizeModal, setShowSizeModal] = useState(false);
   const [preferredSize, setPreferredSize] = useState('any');
   const router = useRouter();
+  const [showNotifModal, setShowNotifModal] = useState(false);
+const [notifsEnabled, setNotifsEnabled] = useState(true);
 
   useEffect(() => {
     loadProfile();
@@ -131,11 +133,11 @@ export default function ProfileScreen() {
             <Text style={styles.menuArrow}>→</Text>
           </TouchableOpacity>
           <View style={styles.menuDivider} />
-          <TouchableOpacity style={styles.menuRow}>
-            <Text style={styles.menuIcon}>🔔</Text>
-            <Text style={styles.menuText}>Notifications</Text>
-            <Text style={styles.menuArrow}>→</Text>
-          </TouchableOpacity>
+          <TouchableOpacity style={styles.menuRow} onPress={() => setShowNotifModal(true)}>
+  <Text style={styles.menuIcon}>🔔</Text>
+  <Text style={styles.menuText}>Notifications</Text>
+  <Text style={styles.menuArrow}>{notifsEnabled ? 'On →' : 'Off →'}</Text>
+</TouchableOpacity>
           <View style={styles.menuDivider} />
           <TouchableOpacity style={styles.menuRow} onPress={() => setShowSizeModal(true)}>
   <Text style={styles.menuIcon}>🐕</Text>
@@ -189,6 +191,49 @@ export default function ProfileScreen() {
         <Text style={styles.version}>sulli v1.0 · made with 🐾 in Kansas City</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
+      <Modal visible={showNotifModal} animationType="slide" transparent>
+  <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
+    <View style={{ backgroundColor: 'white', borderRadius: 24, padding: 24, paddingBottom: 40 }}>
+      <Text style={{ fontSize: 20, fontWeight: '300', color: '#2C2016', marginBottom: 20 }}>notifications</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, backgroundColor: '#F7F2EA', borderRadius: 12, marginBottom: 10 }}>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 14, fontWeight: '500', color: '#2C2016' }}>New matches</Text>
+          <Text style={{ fontSize: 12, color: '#8C7B68' }}>When someone matches with you</Text>
+        </View>
+        <TouchableOpacity
+          style={{ width: 48, height: 28, borderRadius: 14, backgroundColor: notifsEnabled ? '#8B5E3C' : '#D3D1C7', justifyContent: 'center', paddingHorizontal: 3 }}
+          onPress={() => setNotifsEnabled(!notifsEnabled)}>
+          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: 'white', alignSelf: notifsEnabled ? 'flex-end' : 'flex-start' }} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, backgroundColor: '#F7F2EA', borderRadius: 12, marginBottom: 10 }}>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 14, fontWeight: '500', color: '#2C2016' }}>New messages</Text>
+          <Text style={{ fontSize: 12, color: '#8C7B68' }}>When a match sends you a message</Text>
+        </View>
+        <TouchableOpacity
+          style={{ width: 48, height: 28, borderRadius: 14, backgroundColor: notifsEnabled ? '#8B5E3C' : '#D3D1C7', justifyContent: 'center', paddingHorizontal: 3 }}
+          onPress={() => setNotifsEnabled(!notifsEnabled)}>
+          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: 'white', alignSelf: notifsEnabled ? 'flex-end' : 'flex-start' }} />
+        </TouchableOpacity>
+      </View>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', padding: 14, backgroundColor: '#F7F2EA', borderRadius: 12, marginBottom: 16 }}>
+        <View style={{ gap: 4 }}>
+          <Text style={{ fontSize: 14, fontWeight: '500', color: '#2C2016' }}>Date invites</Text>
+          <Text style={{ fontSize: 12, color: '#8C7B68' }}>When a match sends a date invite</Text>
+        </View>
+        <TouchableOpacity
+          style={{ width: 48, height: 28, borderRadius: 14, backgroundColor: notifsEnabled ? '#8B5E3C' : '#D3D1C7', justifyContent: 'center', paddingHorizontal: 3 }}
+          onPress={() => setNotifsEnabled(!notifsEnabled)}>
+          <View style={{ width: 22, height: 22, borderRadius: 11, backgroundColor: 'white', alignSelf: notifsEnabled ? 'flex-end' : 'flex-start' }} />
+        </TouchableOpacity>
+      </View>
+      <TouchableOpacity style={{ padding: 14, alignItems: 'center' }} onPress={() => setShowNotifModal(false)}>
+        <Text style={{ color: '#8C7B68' }}>done</Text>
+      </TouchableOpacity>
+    </View>
+  </View>
+</Modal>
       <Modal visible={showSizeModal} animationType="slide" transparent>
   <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' }}>
     <View style={{ backgroundColor: 'white', borderRadius: 24, padding: 24, paddingBottom: 40 }}>
