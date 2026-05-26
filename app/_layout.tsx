@@ -1,32 +1,48 @@
-import { Stack, useRouter, useSegments } from 'expo-router';
-import { useEffect } from 'react';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, View } from 'react-native';
+import { registerForPushNotifications, savePushToken } from '../notifications';
 import { supabase } from '../supabase';
 
 export default function RootLayout() {
+  const [ready, setReady] = useState(false);
   const router = useRouter();
-  const segments = useSegments();
 
   useEffect(() => {
-    const timer = setTimeout(async () => {
+    const init = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
-          router.replace('/login');
+          setTimeout(() => router.replace('/login'), 500);
         } else {
           const { data } = await supabase
             .from('profiles')
             .select('id')
             .eq('id', session.user.id)
             .maybeSingle();
-          if (data) router.replace('/(tabs)');
-          else router.replace('/profile-setup');
+          if (data) {
+            setTimeout(() => router.replace('/(tabs)'), 500);
+            const token = await registerForPushNotifications();
+            if (token) await savePushToken(token);
+          } else {
+            setTimeout(() => router.replace('/profile-setup'), 500);
+          }
         }
       } catch (e) {
-        router.replace('/login');
+        setTimeout(() => router.replace('/login'), 500);
       }
-    }, 500);
-    return () => clearTimeout(timer);
+      setReady(true);
+    };
+    init();
   }, []);
+
+  if (!ready) {
+    return (
+      <View style={{ flex: 1, backgroundColor: '#F7F2EA', alignItems: 'center', justifyContent: 'center' }}>
+        <ActivityIndicator size="large" color="#8B5E3C" />
+      </View>
+    );
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>

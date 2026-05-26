@@ -1,6 +1,7 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, Dimensions, Image, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { registerForPushNotifications, savePushToken, sendPushNotification } from '../../notifications';
 import { supabase } from '../../supabase';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -21,11 +22,17 @@ export default function HomeScreen() {
 
   useEffect(() => {
     loadProfiles();
+    setupNotifications();
   }, []);
 
   useEffect(() => {
     setPhotoIndex(0);
   }, [currentIndex]);
+
+  const setupNotifications = async () => {
+    const token = await registerForPushNotifications();
+    if (token) await savePushToken(token);
+  };
 
   const loadProfiles = async () => {
     setLoading(true);
@@ -73,6 +80,23 @@ export default function HomeScreen() {
           user1_id: user.id,
           user2_id: swipedId,
         });
+        const { data: theirProfile } = await supabase
+          .from('profiles')
+          .select('push_token, name')
+          .eq('id', swipedId)
+          .single();
+        const { data: myProfile } = await supabase
+          .from('profiles')
+          .select('name, dog_name')
+          .eq('id', user.id)
+          .single();
+        if (theirProfile?.push_token) {
+          await sendPushNotification(
+            theirProfile.push_token,
+            "it's a match! 🐾",
+            `You and ${myProfile?.name} & ${myProfile?.dog_name} matched on Sulli!`
+          );
+        }
         return true;
       }
     }
@@ -191,7 +215,6 @@ export default function HomeScreen() {
               <Text style={styles.cardEmoji}>{profile.dog_emoji || '🐕'}</Text>
             </View>
           )}
-
           {profile.photos?.length > 1 && (
             <View style={styles.photoDotsRow}>
               {profile.photos.map((_: any, i: number) => (
@@ -199,16 +222,8 @@ export default function HomeScreen() {
               ))}
             </View>
           )}
-
-          <TouchableOpacity
-            style={styles.photoLeft}
-            onPress={() => setPhotoIndex(prev => Math.max(0, prev - 1))}
-          />
-          <TouchableOpacity
-            style={styles.photoRight}
-            onPress={() => setPhotoIndex(prev => Math.min((profile.photos?.length || 1) - 1, prev + 1))}
-          />
-
+          <TouchableOpacity style={styles.photoLeft} onPress={() => setPhotoIndex(prev => Math.max(0, prev - 1))} />
+          <TouchableOpacity style={styles.photoRight} onPress={() => setPhotoIndex(prev => Math.min((profile.photos?.length || 1) - 1, prev + 1))} />
           <View style={styles.cardBadge}>
             <Text style={styles.cardBadgeText}>🐶 {profile.dog_name}</Text>
           </View>
