@@ -24,7 +24,7 @@ export default function TabLayout() {
       <Tabs.Screen name="explore" options={{ title: 'Dates', tabBarIcon: ({ color }) => <TabIcon emoji="☕" color={color} /> }} />
       <Tabs.Screen name="calendar" options={{ title: 'Plans', tabBarIcon: ({ color }) => <TabIcon emoji="🗓" color={color} /> }} />
       <Tabs.Screen name="messages" options={{ title: 'Wags', tabBarIcon: ({ color }) => <TabIcon emoji="💬" color={color} /> }} />
-      <Tabs.Screen name="safety" options={{ title: 'Safety', tabBarIcon: ({ color }) => <TabIcon emoji="🛡" color={color} /> }} />
+      <Tabs.Screen name="safety" options={{ title: 'Profile', tabBarIcon: ({ color }) => <TabIcon emoji="🐶" color={color} /> }} />
     </Tabs>
   );
 }
