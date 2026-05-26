@@ -281,6 +281,9 @@ const handleBlock = async () => {
             </View>
 
             <Text style={styles.modalLabel}>PICK A SPOT</Text>
+            <TouchableOpacity style={styles.mapPickerBtn} onPress={() => router.push('/map-picker' as any)}>
+  <Text style={styles.mapPickerBtnText}>🗺 open map to pick a spot</Text>
+</TouchableOpacity>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.venueScroll}>
               {KC_VENUES.map(v => (
                 <TouchableOpacity key={v} style={[styles.venueChip, selectedVenue === v && styles.venueChipActive]} onPress={() => setSelectedVenue(v)}>
@@ -429,4 +432,6 @@ reportReasonText: { fontSize: 14, color: '#2C2016' },
 reportReasonTextActive: { color: 'white' },
 blockBtn: { marginTop: 12, padding: 14, borderRadius: 12, borderWidth: 1, borderColor: '#F4B8A8', alignItems: 'center' },
 blockBtnText: { fontSize: 14, color: '#D4634A', fontWeight: '500' },
+mapPickerBtn: { backgroundColor: '#F7F2EA', borderWidth: 1, borderColor: '#E8D5B7', borderRadius: 12, padding: 12, alignItems: 'center', marginBottom: 10 },
+mapPickerBtnText: { fontSize: 13, color: '#8B5E3C', fontWeight: '500' },
 });

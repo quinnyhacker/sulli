@@ -86,11 +86,22 @@ const { data: potentials } = await query.limit(20);
         .eq('direction', 'right')
         .single();
 
-      if (theirSwipe) {
-        await supabase.from('matches').insert({
-          user1_id: user.id,
-          user2_id: swipedId,
-        });
+      const { data: theirSwipeCheck, error: swipeError } = await supabase
+  .from('swipes')
+  .select('id')
+  .eq('swiper_id', swipedId)
+  .eq('swiped_id', user.id)
+  .eq('direction', 'right')
+  .single();
+
+console.log('their swipe:', theirSwipeCheck, 'error:', swipeError);
+
+if (theirSwipeCheck) {
+  const { error: matchError } = await supabase.from('matches').insert({
+    user1_id: user.id,
+    user2_id: swipedId,
+  });
+  console.log('match error:', matchError);
         const { data: theirProfile } = await supabase
           .from('profiles')
           .select('push_token, name')
@@ -284,11 +295,11 @@ const styles = StyleSheet.create({
   topNav: { paddingTop: 60, paddingHorizontal: 20, paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   navLogo: { fontSize: 28, color: '#8B5E3C', fontWeight: '300' },
   signOut: { fontSize: 12, color: '#8C7B68' },
-  card: { marginHorizontal: 16, backgroundColor: 'white', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E8D5B7', position: 'absolute', left: 0, right: 0, top: 110 },
-  cardBack: { top: 118, marginHorizontal: 22, opacity: 0.8 },
-  photoContainer: { position: 'relative', height: 320 },
-  cardPhotoImage: { width: '100%', height: 320 },
-  cardPhoto: { height: 320, backgroundColor: '#EDE4D4', alignItems: 'center', justifyContent: 'center' },
+  card: { position: 'absolute', left: 10, right: 10, top: 108, bottom: 30, backgroundColor: 'white', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E8D5B7' },
+  actionRow: { position: 'absolute', bottom: 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 24 },
+  photoContainer: { height: '62%', position: 'relative' },
+  cardPhotoImage: { width: '100%', height: '100%' },
+  cardPhoto: { height: '100%', backgroundColor: '#EDE4D4', alignItems: 'center', justifyContent: 'center' },
   cardEmoji: { fontSize: 80 },
   photoDotsRow: { position: 'absolute', top: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 4 },
   photoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
@@ -299,21 +310,21 @@ const styles = StyleSheet.create({
   cardBadgeText: { fontSize: 11, color: '#8B5E3C', fontWeight: '500' },
   cardDistance: { position: 'absolute', bottom: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   cardDistanceText: { fontSize: 11, color: 'white' },
-  cardBody: { padding: 16 },
+  cardBody: { padding: 14, flex: 1 },
   cardNameRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginBottom: 4 },
   cardName: { fontSize: 22, color: '#2C2016', fontWeight: '400' },
   cardAge: { fontSize: 16, color: '#8C7B68', fontWeight: '300' },
-  cardDog: { fontSize: 12, color: '#8B5E3C', fontWeight: '500', marginBottom: 6 },
-  cardBio: { fontSize: 13, color: '#8C7B68', lineHeight: 20, marginBottom: 10 },
+  cardDog: { fontSize: 12, color: '#8B5E3C', fontWeight: '500', marginBottom: 4 },
+  cardBio: { fontSize: 12, color: '#8C7B68', lineHeight: 18, marginBottom: 8 },
   tagsRow: { flexDirection: 'row', gap: 6, flexWrap: 'wrap' },
   tag: { backgroundColor: '#F7F2EA', borderWidth: 1, borderColor: '#E8D5B7', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 3 },
   tagText: { fontSize: 11, color: '#8B5E3C', fontWeight: '500' },
-  actionRow: { position: 'absolute', bottom: 80, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 24 },
-  actionBtn: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, backgroundColor: 'white' },
+  actionRow: { position: 'absolute', bottom: 98, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 24 },
+  actionBtn: { width: 60, height: 60, borderRadius: 30, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, backgroundColor: 'white' },
   passBtn: { borderColor: '#E8D0C8' },
-  passBtnText: { fontSize: 24, color: '#C87858' },
-  likeBtn: { borderColor: '#F4B8A8', width: 72, height: 72, borderRadius: 36 },
-  likeBtnText: { fontSize: 28, color: '#D4634A' },
+  passBtnText: { fontSize: 22, color: '#C87858' },
+  likeBtn: { borderColor: '#F4B8A8' },
+  likeBtnText: { fontSize: 22, color: '#D4634A' },
   hintBadge: { position: 'absolute', top: 40, zIndex: 10, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, borderWidth: 3 },
   woofBadge: { left: 20, borderColor: '#7A8C6E', transform: [{ rotate: '-12deg' }] },
   woofText: { fontSize: 24, fontWeight: '700', color: '#7A8C6E' },

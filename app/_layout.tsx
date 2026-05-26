@@ -57,6 +57,7 @@ export default function RootLayout() {
       <Stack.Screen name="onboarding" />
       <Stack.Screen name="privacy" />
       <Stack.Screen name="venue" />
+      <Stack.Screen name="map-picker" />
     </Stack>
   );
 }
