@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Dimensions, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Animated, Dimensions, Image, PanResponder, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../../supabase';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -11,7 +11,7 @@ export default function HomeScreen() {
   const [matchName, setMatchName] = useState('');
   const [showMatch, setShowMatch] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [photoIndex, setPhotoIndex] = useState(0);
   const position = useRef(new Animated.ValueXY()).current;
   const router = useRouter();
 
@@ -23,17 +23,14 @@ export default function HomeScreen() {
     loadProfiles();
   }, []);
 
+  useEffect(() => {
+    setPhotoIndex(0);
+  }, [currentIndex]);
+
   const loadProfiles = async () => {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    setCurrentUser(user);
-
-    const { data: myProfile } = await supabase
-      .from('profiles')
-      .select('id')
-      .eq('id', user.id)
-      .single();
 
     const { data: swipedIds } = await supabase
       .from('swipes')
@@ -54,7 +51,7 @@ export default function HomeScreen() {
 
   const recordSwipe = async (direction: string, swipedId: string) => {
     const { data: { user } } = await supabase.auth.getUser();
-    if (!user) return;
+    if (!user) return false;
 
     await supabase.from('swipes').insert({
       swiper_id: user.id,
@@ -153,21 +150,26 @@ export default function HomeScreen() {
 
   const profile = profiles[currentIndex];
   const nextProfile = profiles[currentIndex + 1];
+  const currentPhoto = profile.photos?.[photoIndex] || null;
 
   return (
     <View style={styles.container}>
       <View style={styles.topNav}>
         <Text style={styles.navLogo}>sulli 🐾</Text>
-        <TouchableOpacity onPress={() => supabase.auth.signOut()}>
+        <TouchableOpacity onPress={() => supabase.auth.signOut().then(() => router.replace('/login'))}>
           <Text style={styles.signOut}>sign out</Text>
         </TouchableOpacity>
       </View>
 
       {nextProfile && (
         <View style={[styles.card, styles.cardBack]}>
-          <View style={styles.cardPhoto}>
-            <Text style={styles.cardEmoji}>{nextProfile.dog_emoji || '🐕'}</Text>
-          </View>
+          {nextProfile.photos?.[0] ? (
+            <Image source={{ uri: nextProfile.photos[0] }} style={styles.cardPhotoImage} />
+          ) : (
+            <View style={styles.cardPhoto}>
+              <Text style={styles.cardEmoji}>{nextProfile.dog_emoji || '🐕'}</Text>
+            </View>
+          )}
         </View>
       )}
 
@@ -180,8 +182,33 @@ export default function HomeScreen() {
         <Animated.View style={[styles.hintBadge, styles.passBadge, { opacity: nopeOpacity }]}>
           <Text style={styles.passText}>PASS</Text>
         </Animated.View>
-        <View style={styles.cardPhoto}>
-          <Text style={styles.cardEmoji}>{profile.dog_emoji || '🐕'}</Text>
+
+        <View style={styles.photoContainer}>
+          {currentPhoto ? (
+            <Image source={{ uri: currentPhoto }} style={styles.cardPhotoImage} />
+          ) : (
+            <View style={styles.cardPhoto}>
+              <Text style={styles.cardEmoji}>{profile.dog_emoji || '🐕'}</Text>
+            </View>
+          )}
+
+          {profile.photos?.length > 1 && (
+            <View style={styles.photoDotsRow}>
+              {profile.photos.map((_: any, i: number) => (
+                <View key={i} style={[styles.photoDot, i === photoIndex && styles.photoDotActive]} />
+              ))}
+            </View>
+          )}
+
+          <TouchableOpacity
+            style={styles.photoLeft}
+            onPress={() => setPhotoIndex(prev => Math.max(0, prev - 1))}
+          />
+          <TouchableOpacity
+            style={styles.photoRight}
+            onPress={() => setPhotoIndex(prev => Math.min((profile.photos?.length || 1) - 1, prev + 1))}
+          />
+
           <View style={styles.cardBadge}>
             <Text style={styles.cardBadgeText}>🐶 {profile.dog_name}</Text>
           </View>
@@ -189,13 +216,14 @@ export default function HomeScreen() {
             <Text style={styles.cardDistanceText}>{profile.neighborhood}</Text>
           </View>
         </View>
+
         <View style={styles.cardBody}>
           <View style={styles.cardNameRow}>
             <Text style={styles.cardName}>{profile.name}</Text>
             <Text style={styles.cardAge}>{profile.age}</Text>
           </View>
           <Text style={styles.cardDog}>🐶 {profile.dog_name} · {profile.dog_breed}, {profile.dog_age}y</Text>
-          <Text style={styles.cardBio}>{profile.bio || 'Dog lover in KC 🐾'}</Text>
+          <Text style={styles.cardBio} numberOfLines={2}>{profile.bio || 'Dog lover in KC 🐾'}</Text>
           <View style={styles.tagsRow}>
             <View style={styles.tag}><Text style={styles.tagText}>{profile.neighborhood}</Text></View>
             <View style={styles.tag}><Text style={styles.tagText}>{profile.dog_breed}</Text></View>
@@ -232,8 +260,15 @@ const styles = StyleSheet.create({
   signOut: { fontSize: 12, color: '#8C7B68' },
   card: { marginHorizontal: 16, backgroundColor: 'white', borderRadius: 24, overflow: 'hidden', borderWidth: 1, borderColor: '#E8D5B7', position: 'absolute', left: 0, right: 0, top: 110 },
   cardBack: { top: 118, marginHorizontal: 22, opacity: 0.8 },
-  cardPhoto: { height: 280, backgroundColor: '#EDE4D4', alignItems: 'center', justifyContent: 'center' },
+  photoContainer: { position: 'relative', height: 320 },
+  cardPhotoImage: { width: '100%', height: 320 },
+  cardPhoto: { height: 320, backgroundColor: '#EDE4D4', alignItems: 'center', justifyContent: 'center' },
   cardEmoji: { fontSize: 80 },
+  photoDotsRow: { position: 'absolute', top: 12, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 4 },
+  photoDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.5)' },
+  photoDotActive: { backgroundColor: 'white', width: 18 },
+  photoLeft: { position: 'absolute', left: 0, top: 0, bottom: 0, width: '50%' },
+  photoRight: { position: 'absolute', right: 0, top: 0, bottom: 0, width: '50%' },
   cardBadge: { position: 'absolute', top: 12, right: 12, backgroundColor: 'white', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, borderWidth: 1, borderColor: '#E8D5B7' },
   cardBadgeText: { fontSize: 11, color: '#8B5E3C', fontWeight: '500' },
   cardDistance: { position: 'absolute', bottom: 12, left: 12, backgroundColor: 'rgba(0,0,0,0.4)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
