@@ -86,7 +86,7 @@ export default function ProfileScreen() {
         {/* Edit Profile */}
         <Text style={styles.sectionLabel}>MY PROFILE</Text>
         <View style={styles.menuCard}>
-          <TouchableOpacity style={styles.menuRow} onPress={() => router.push('/profile-setup')}>
+          <TouchableOpacity style={styles.menuRow} onPress={() => router.push('/edit-profile')}>
             <Text style={styles.menuIcon}>✏️</Text>
             <Text style={styles.menuText}>Edit profile</Text>
             <Text style={styles.menuArrow}>→</Text>

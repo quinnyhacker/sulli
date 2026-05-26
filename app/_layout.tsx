@@ -34,6 +34,7 @@ export default function RootLayout() {
       <Stack.Screen name="login" />
       <Stack.Screen name="profile-setup" />
       <Stack.Screen name="chat" />
+      <Stack.Screen name="edit-profile" />
     </Stack>
   );
 }
