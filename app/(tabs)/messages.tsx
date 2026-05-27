@@ -29,7 +29,7 @@ export default function MessagesScreen() {
       const otherId = match.user1_id === user.id ? match.user2_id : match.user1_id;
       const { data: profile } = await supabase
         .from('profiles')
-        .select('name, dog_name, dog_emoji')
+        .select('name, dog_name, dog_emoji, photos')
         .eq('id', otherId)
         .single();
       const { data: lastMsg } = await supabase
@@ -57,13 +57,19 @@ export default function MessagesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Wags 💬</Text>
+        <Text style={styles.title}>Wags</Text>
       </View>
       <ScrollView style={styles.scroll}>
         {matches.length === 0 ? (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🐾</Text>
-            <Text style={styles.emptyTitle}>no matches yet!</Text>
+            <View style={styles.emptyIcon}>
+              <View style={styles.bubble} />
+              <View style={styles.bubbleTail} />
+              <View style={[styles.bubbleDot, { left: 10 }]} />
+              <View style={[styles.bubbleDot, { left: 20 }]} />
+              <View style={[styles.bubbleDot, { left: 30 }]} />
+            </View>
+            <Text style={styles.emptyTitle}>no matches yet</Text>
             <Text style={styles.emptySub}>Keep swiping to find your pup's new best friend</Text>
           </View>
         ) : (
@@ -73,15 +79,20 @@ export default function MessagesScreen() {
               style={styles.msgRow}
               onPress={() => router.push(`/chat?matchId=${match.id}&otherId=${match.otherId}&name=${match.profile?.name}&dogName=${match.profile?.dog_name}&emoji=${match.profile?.dog_emoji}`)}>
               <View style={styles.avatar}>
-                <Text style={styles.avatarEmoji}>{match.profile?.dog_emoji || '🐕'}</Text>
+                <Text style={styles.avatarInitial}>
+                  {match.profile?.name?.charAt(0)?.toUpperCase() || '?'}
+                </Text>
               </View>
               <View style={styles.msgContent}>
                 <View style={styles.msgTopRow}>
                   <Text style={styles.msgName}>{match.profile?.name} & {match.profile?.dog_name}</Text>
-                  <Text style={styles.msgTime}>{match.lastMsg ? new Date(match.lastMsg.created_at).toLocaleDateString() : 'new match'}</Text>
+                  <Text style={styles.msgTime}>{match.lastMsg ? new Date(match.lastMsg.created_at).toLocaleDateString() : 'new'}</Text>
                 </View>
                 <Text style={styles.msgPreview} numberOfLines={1}>
-                  {match.lastMsg?.content?.startsWith('📅 DATE_INVITE:') ? '🗓 sent a date invite' : match.lastMsg?.content || '🐾 you matched! say hello'}
+                  {match.lastMsg?.content?.startsWith('📅 DATE_INVITE:') 
+                    ? 'sent a date invite' 
+                    : match.lastMsg?.content 
+                    || 'you matched — say hello'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -98,12 +109,15 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, color: '#2C2016', fontWeight: '300' },
   scroll: { flex: 1, paddingHorizontal: 16 },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyEmoji: { fontSize: 52 },
+  emptyIcon: { width: 56, height: 56, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  bubble: { width: 48, height: 36, borderRadius: 12, borderWidth: 2, borderColor: '#C8956C' },
+  bubbleTail: { position: 'absolute', bottom: 4, left: 10, width: 8, height: 8, borderLeftWidth: 2, borderBottomWidth: 2, borderColor: '#C8956C', transform: [{ rotate: '-45deg' }] },
+  bubbleDot: { position: 'absolute', top: 16, width: 4, height: 4, borderRadius: 2, backgroundColor: '#C8956C' },
   emptyTitle: { fontSize: 22, color: '#2C2016', fontWeight: '300' },
   emptySub: { fontSize: 13, color: '#8C7B68', textAlign: 'center', lineHeight: 20 },
-  msgRow: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#F0EBE3' },
-  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#E8D5B7', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#8B5E3C' },
-  avatarEmoji: { fontSize: 24 },
+  msgRow: { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderBottomWidth: 0.5, borderBottomColor: '#F0EBE3' },
+  avatar: { width: 48, height: 48, borderRadius: 24, backgroundColor: '#8B5E3C', alignItems: 'center', justifyContent: 'center' },
+  avatarInitial: { fontSize: 18, fontWeight: '500', color: 'white' },
   msgContent: { flex: 1 },
   msgTopRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 3 },
   msgName: { fontSize: 13, fontWeight: '500', color: '#2C2016' },

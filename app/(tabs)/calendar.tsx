@@ -44,12 +44,17 @@ export default function CalendarScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Your plans 🗓</Text>
+        <Text style={styles.title}>Your plans</Text>
       </View>
       <ScrollView style={styles.scroll}>
         {dates.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>🗓</Text>
+            <View style={styles.emptyIcon}>
+              <View style={styles.emptyCalTop} />
+              <View style={styles.emptyCalBody} />
+              <View style={styles.emptyCalLeft} />
+              <View style={styles.emptyCalRight} />
+            </View>
             <Text style={styles.emptyTitle}>no dates planned yet!</Text>
             <Text style={styles.emptySub}>Send a date invite from your matches to get started</Text>
           </View>
@@ -57,7 +62,12 @@ export default function CalendarScreen() {
         {dates.map((date) => (
           <View key={date.id} style={styles.card}>
             <View style={styles.dateBox}>
-              <Text style={styles.dateNum}>🗓</Text>
+              <View style={styles.calIcon}>
+                <View style={styles.calTop} />
+                <View style={styles.calBody} />
+                <View style={styles.calPinLeft} />
+                <View style={styles.calPinRight} />
+              </View>
             </View>
             <View style={styles.cardInfo}>
               <Text style={styles.cardTitle}>{date.venue}</Text>
@@ -79,12 +89,20 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, color: '#2C2016', fontWeight: '300' },
   scroll: { flex: 1, paddingHorizontal: 16 },
   emptyState: { alignItems: 'center', paddingTop: 80, gap: 12 },
-  emptyEmoji: { fontSize: 52 },
+  emptyIcon: { width: 52, height: 52, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  emptyCalTop: { width: 40, height: 6, backgroundColor: '#C8956C', borderTopLeftRadius: 4, borderTopRightRadius: 4 },
+  emptyCalBody: { width: 40, height: 28, borderWidth: 2, borderTopWidth: 0, borderColor: '#C8956C', borderBottomLeftRadius: 4, borderBottomRightRadius: 4 },
+  emptyCalLeft: { position: 'absolute', top: 0, left: 10, width: 3, height: 10, backgroundColor: '#C8956C', borderRadius: 2 },
+  emptyCalRight: { position: 'absolute', top: 0, right: 10, width: 3, height: 10, backgroundColor: '#C8956C', borderRadius: 2 },
   emptyTitle: { fontSize: 22, color: '#2C2016', fontWeight: '300' },
   emptySub: { fontSize: 13, color: '#8C7B68', textAlign: 'center', lineHeight: 20 },
   card: { backgroundColor: 'white', borderRadius: 16, padding: 14, marginBottom: 10, flexDirection: 'row', gap: 12, borderWidth: 1, borderColor: '#E8D5B7' },
   dateBox: { backgroundColor: '#8B5E3C', borderRadius: 10, padding: 8, alignItems: 'center', width: 48, justifyContent: 'center' },
-  dateNum: { fontSize: 22 },
+  calIcon: { width: 28, height: 28, position: 'relative', alignItems: 'center', justifyContent: 'center' },
+  calTop: { width: 24, height: 5, backgroundColor: 'rgba(255,255,255,0.9)', borderTopLeftRadius: 3, borderTopRightRadius: 3 },
+  calBody: { width: 24, height: 14, borderWidth: 1.5, borderTopWidth: 0, borderColor: 'rgba(255,255,255,0.9)', borderBottomLeftRadius: 3, borderBottomRightRadius: 3 },
+  calPinLeft: { position: 'absolute', top: 0, left: 5, width: 2, height: 7, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 1 },
+  calPinRight: { position: 'absolute', top: 0, right: 5, width: 2, height: 7, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 1 },
   cardInfo: { flex: 1 },
   cardTitle: { fontSize: 13, fontWeight: '500', color: '#2C2016', marginBottom: 3 },
   cardSub: { fontSize: 11, color: '#8C7B68', marginBottom: 6 },

@@ -21,6 +21,27 @@ const places = [
 const filters = ['All', 'Patios', 'Parks', 'Activities', 'Shopping'];
 const filterMap: Record<string, string> = { All: 'all', Patios: 'patio', Parks: 'park', Activities: 'activity', Shopping: 'shop' };
 
+const typeLabel: Record<string, string> = {
+  patio: 'PATIO',
+  park: 'PARK',
+  activity: 'ACTIVITY',
+  shop: 'SHOP',
+};
+
+const typeBg: Record<string, string> = {
+  patio: '#F5EDE0',
+  park: '#E4EDD8',
+  activity: '#E8E0F0',
+  shop: '#E0EAF5',
+};
+
+const typeColor: Record<string, string> = {
+  patio: '#8B5E3C',
+  park: '#3B6D11',
+  activity: '#5B3B8B',
+  shop: '#1A5B8B',
+};
+
 function PlaceCard({ place }: { place: any }) {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [tried, setTried] = useState(false);
@@ -45,13 +66,6 @@ function PlaceCard({ place }: { place: any }) {
 
   fetchPhoto();
 
-  const getEmoji = () => {
-    if (place.type === 'patio') return '☕';
-    if (place.type === 'park') return '🌿';
-    if (place.type === 'activity') return '🐕';
-    return '🎀';
-  };
-
   const handlePress = () => {
     router.push(`/venue?name=${encodeURIComponent(place.name)}&loc=${encodeURIComponent(place.loc)}&type=${place.type}&rating=${place.rating}&photo=${encodeURIComponent(photoUrl || '')}&tags=${encodeURIComponent(place.tags.join(','))}`);
   };
@@ -62,14 +76,17 @@ function PlaceCard({ place }: { place: any }) {
         {photoUrl ? (
           <Image source={{ uri: photoUrl }} style={styles.venuePhotoImage} />
         ) : (
-          <View style={styles.venuePhotoPlaceholder}>
-            <Text style={styles.venueEmoji}>{getEmoji()}</Text>
+          <View style={[styles.venuePhotoPlaceholder, { backgroundColor: typeBg[place.type] || '#EDE4D4' }]}>
+            <Text style={[styles.placeholderType, { color: typeColor[place.type] || '#8B5E3C' }]}>{place.name.charAt(0)}</Text>
           </View>
         )}
+        <View style={[styles.typeBadge, { backgroundColor: typeBg[place.type] }]}>
+          <Text style={[styles.typeBadgeText, { color: typeColor[place.type] }]}>{typeLabel[place.type]}</Text>
+        </View>
       </View>
       <View style={styles.venueInfo}>
         <Text style={styles.venueName}>{place.name}</Text>
-        <Text style={styles.venueLoc}>📍 {place.loc}</Text>
+        <Text style={styles.venueLoc}>{place.loc}</Text>
         <View style={styles.venueBottom}>
           <View style={styles.tagsRow}>
             {place.tags.map((t: string, j: number) => (
@@ -78,7 +95,7 @@ function PlaceCard({ place }: { place: any }) {
               </View>
             ))}
           </View>
-          <Text style={styles.rating}>⭐ {place.rating}</Text>
+          <Text style={styles.rating}>{place.rating} ★</Text>
         </View>
       </View>
     </TouchableOpacity>
@@ -92,7 +109,7 @@ export default function DatesScreen() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Date ideas 🐾</Text>
+        <Text style={styles.title}>Date ideas</Text>
       </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.filterRow} contentContainerStyle={{ gap: 8, paddingHorizontal: 16 }}>
         {filters.map(f => (
@@ -120,10 +137,12 @@ const styles = StyleSheet.create({
   filterTextActive: { color: 'white' },
   scroll: { flex: 1, paddingHorizontal: 16 },
   venueCard: { backgroundColor: 'white', borderWidth: 1, borderColor: '#E8D5B7', borderRadius: 16, overflow: 'hidden', marginBottom: 10 },
-  venuePhoto: { height: 140 },
+  venuePhoto: { height: 140, position: 'relative' },
   venuePhotoImage: { width: '100%', height: 140 },
-  venuePhotoPlaceholder: { width: '100%', height: 140, backgroundColor: '#EDE4D4', alignItems: 'center', justifyContent: 'center' },
-  venueEmoji: { fontSize: 48 },
+  venuePhotoPlaceholder: { width: '100%', height: 140, alignItems: 'center', justifyContent: 'center' },
+  placeholderType: { fontSize: 48, fontWeight: '200' },
+  typeBadge: { position: 'absolute', top: 10, left: 10, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6 },
+  typeBadgeText: { fontSize: 9, fontWeight: '600', letterSpacing: 0.8 },
   venueInfo: { padding: 12 },
   venueName: { fontSize: 14, fontWeight: '500', color: '#2C2016', marginBottom: 3 },
   venueLoc: { fontSize: 11, color: '#8C7B68', marginBottom: 8 },
