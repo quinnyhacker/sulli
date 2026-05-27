@@ -12,11 +12,15 @@ export default function HomeScreen() {
   const [matchName, setMatchName] = useState('');
   const [showMatch, setShowMatch] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'owner' | 'pup'>('pup');
   const scrollRef = useRef<ScrollView>(null);
   const router = useRouter();
 
   useEffect(() => { loadProfiles(); setupNotifications(); }, []);
-  useEffect(() => { scrollRef.current?.scrollTo({ y: 0, animated: false }); }, [currentIndex]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+    setActiveTab('pup');
+  }, [currentIndex]);
 
   const setupNotifications = async () => {
     const token = await registerForPushNotifications();
@@ -27,34 +31,19 @@ export default function HomeScreen() {
     setLoading(true);
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-
     await supabase.from('profiles').update({ last_active: new Date().toISOString() }).eq('id', user.id);
-
     const { data: swipedIds } = await supabase.from('swipes').select('swiped_id').eq('swiper_id', user.id);
     const excluded = [user.id, ...(swipedIds?.map((s: any) => s.swiped_id) || [])];
-
-    const { data: myProfile } = await supabase
-      .from('profiles')
-      .select('preferred_dog_size, seeking, gender')
-      .eq('id', user.id)
-      .single();
-
-    let query = supabase
-      .from('profiles')
-      .select('*')
-      .not('id', 'in', `(${excluded.join(',')})`);
-
+    const { data: myProfile } = await supabase.from('profiles').select('preferred_dog_size, seeking, gender').eq('id', user.id).single();
+    let query = supabase.from('profiles').select('*').not('id', 'in', `(${excluded.join(',')})`);
     if (myProfile?.preferred_dog_size && myProfile.preferred_dog_size !== 'any') {
       query = query.eq('dog_size', myProfile.preferred_dog_size);
     }
-
     if (myProfile?.seeking && myProfile.seeking !== 'Everyone') {
       const genderFilter = myProfile.seeking === 'Men' ? 'Man' : 'Woman';
       query = query.eq('gender', genderFilter);
     }
-
     query = query.order('last_active', { ascending: false });
-
     const { data: potentials } = await query.limit(20);
     setProfiles(potentials || []);
     setLoading(false);
@@ -65,13 +54,7 @@ export default function HomeScreen() {
     if (!user) return false;
     await supabase.from('swipes').insert({ swiper_id: user.id, swiped_id: swipedId, direction });
     if (direction === 'right') {
-      const { data: theirSwipe } = await supabase
-        .from('swipes')
-        .select('id')
-        .eq('swiper_id', swipedId)
-        .eq('swiped_id', user.id)
-        .eq('direction', 'right')
-        .maybeSingle();
+      const { data: theirSwipe } = await supabase.from('swipes').select('id').eq('swiper_id', swipedId).eq('swiped_id', user.id).eq('direction', 'right').maybeSingle();
       if (theirSwipe) {
         await supabase.from('matches').insert({ user1_id: user.id, user2_id: swipedId });
         const { data: theirProfile } = await supabase.from('profiles').select('push_token, name').eq('id', swipedId).single();
@@ -140,6 +123,9 @@ export default function HomeScreen() {
   );
 
   const profile = profiles[currentIndex];
+  const isPup = activeTab === 'pup';
+  const displayPhotos = isPup ? (profile.dog_photos?.length ? profile.dog_photos : profile.photos) : profile.photos;
+  const firstPhoto = displayPhotos?.[0] || null;
 
   return (
     <View style={styles.container}>
@@ -153,9 +139,9 @@ export default function HomeScreen() {
       <ScrollView ref={scrollRef} style={styles.scroll} showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
 
         <View style={styles.photoBlock}>
-          {profile.photos?.[0]
-            ? <Image source={{ uri: profile.photos[0] }} style={styles.photo} />
-            : <View style={[styles.photo, styles.photoPlaceholder]}><Text style={styles.placeholderInitial}>{profile.name?.charAt(0)}</Text></View>
+          {firstPhoto
+            ? <Image source={{ uri: firstPhoto }} style={styles.photo} />
+            : <View style={[styles.photo, styles.photoPlaceholder]}><Text style={styles.placeholderInitial}>{isPup ? profile.dog_name?.charAt(0) : profile.name?.charAt(0)}</Text></View>
           }
           <View style={styles.nameOverlay}>
             <View style={styles.nameRow}>
@@ -166,33 +152,71 @@ export default function HomeScreen() {
             <Text style={styles.overlayAge}>{profile.age}</Text>
             <Text style={styles.overlayNeighborhood}>{profile.neighborhood} · {profile.dog_breed}</Text>
           </View>
-        </View>
 
-        {profile.bio ? (
-          <View style={styles.card}>
-            <Text style={styles.cardLabel}>ABOUT</Text>
-            <Text style={styles.cardText}>{profile.bio}</Text>
-          </View>
-        ) : null}
-
-        <View style={styles.card}>
-          <Text style={styles.cardLabel}>THE PUP</Text>
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-            <View>
-              <Text style={styles.dogName}>{profile.dog_name}</Text>
-              <Text style={styles.dogBreed}>{profile.dog_breed}, {profile.dog_age}y old</Text>
-            </View>
-            <View style={styles.dogSizeBadge}>
-              <Text style={styles.dogSizeBadgeText}>{profile.dog_size || 'Medium'}</Text>
-            </View>
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              style={[styles.toggleBtn, activeTab === 'pup' && styles.toggleBtnActive]}
+              onPress={() => { setActiveTab('pup'); scrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
+              <Text style={[styles.toggleBtnText, activeTab === 'pup' && styles.toggleBtnTextActive]}>
+                {profile.dog_name || 'Pup'}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.toggleBtn, activeTab === 'owner' && styles.toggleBtnActive]}
+              onPress={() => { setActiveTab('owner'); scrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
+              <Text style={[styles.toggleBtnText, activeTab === 'owner' && styles.toggleBtnTextActive]}>
+                {profile.name}
+              </Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        {profile.photos?.slice(1).map((photo: string, i: number) => (
-          <View key={i} style={[styles.photoBlock, { marginBottom: 8 }]}>
-            <Image source={{ uri: photo }} style={styles.photo} />
-          </View>
-        ))}
+        {isPup ? (
+          <>
+            <View style={styles.card}>
+              <Text style={styles.cardLabel}>THE PUP</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <View>
+                  <Text style={styles.dogName}>{profile.dog_name}</Text>
+                  <Text style={styles.dogBreed}>{profile.dog_breed}, {profile.dog_age}y old</Text>
+                </View>
+                <View style={styles.dogSizeBadge}>
+                  <Text style={styles.dogSizeBadgeText}>{profile.dog_size || 'Medium'}</Text>
+                </View>
+              </View>
+              {profile.dog_personality?.length > 0 && (
+                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                  {profile.dog_personality.map((trait: string) => (
+                    <View key={trait} style={styles.traitBadge}>
+                      <Text style={styles.traitBadgeText}>{trait}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {profile.dog_photos?.slice(1).map((photo: string, i: number) => (
+              <View key={i} style={[styles.photoBlock, { marginBottom: 8 }]}>
+                <Image source={{ uri: photo }} style={styles.photo} />
+              </View>
+            ))}
+          </>
+        ) : (
+          <>
+            {profile.bio ? (
+              <View style={styles.card}>
+                <Text style={styles.cardLabel}>ABOUT</Text>
+                <Text style={styles.cardText}>{profile.bio}</Text>
+              </View>
+            ) : null}
+
+            {profile.photos?.slice(1).map((photo: string, i: number) => (
+              <View key={i} style={[styles.photoBlock, { marginBottom: 8 }]}>
+                <Image source={{ uri: photo }} style={styles.photo} />
+              </View>
+            ))}
+          </>
+        )}
 
         <View style={{ height: 24 }} />
       </ScrollView>
@@ -233,6 +257,11 @@ const styles = StyleSheet.create({
   overlayDog: { fontSize: 26, color: 'white', fontWeight: '300', fontStyle: 'italic' },
   overlayAge: { fontSize: 18, color: 'rgba(255,255,255,0.85)', fontWeight: '300', marginBottom: 2 },
   overlayNeighborhood: { fontSize: 12, color: 'rgba(255,255,255,0.65)', marginTop: 2 },
+  toggleContainer: { position: 'absolute', top: 16, left: 0, right: 0, flexDirection: 'row', justifyContent: 'center', gap: 8, paddingHorizontal: 16 },
+  toggleBtn: { paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.3)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.2)' },
+  toggleBtnActive: { backgroundColor: 'white' },
+  toggleBtnText: { fontSize: 13, color: 'rgba(255,255,255,0.85)', fontWeight: '500' },
+  toggleBtnTextActive: { color: '#2C2016' },
   card: { backgroundColor: 'white', borderRadius: 16, padding: 18, borderWidth: 0.5, borderColor: '#E8D5B7', marginBottom: 8 },
   cardLabel: { fontSize: 10, color: '#8C7B68', letterSpacing: 1, fontWeight: '500', marginBottom: 10 },
   cardText: { fontSize: 15, color: '#2C2016', lineHeight: 24 },
@@ -240,6 +269,8 @@ const styles = StyleSheet.create({
   dogBreed: { fontSize: 13, color: '#8C7B68' },
   dogSizeBadge: { backgroundColor: '#F7F2EA', borderRadius: 20, paddingHorizontal: 12, paddingVertical: 6, borderWidth: 0.5, borderColor: '#E8D5B7' },
   dogSizeBadgeText: { fontSize: 11, color: '#8B5E3C', fontWeight: '500' },
+  traitBadge: { backgroundColor: '#F7F2EA', borderRadius: 20, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 0.5, borderColor: '#E8D5B7' },
+  traitBadgeText: { fontSize: 11, color: '#8B5E3C', fontWeight: '500' },
   actionBar: { flexDirection: 'row', justifyContent: 'center', paddingHorizontal: 40, paddingTop: 10, paddingBottom: 16, backgroundColor: 'white', borderTopWidth: 0.5, borderTopColor: '#F0EBE3', gap: 12 },
   passBtn: { width: 150, height: 52, borderRadius: 14, backgroundColor: '#F7F2EA', borderWidth: 1, borderColor: '#E8D5B7', alignItems: 'center', justifyContent: 'center' },
   passBtnInner: { flexDirection: 'row', alignItems: 'center', gap: 8 },

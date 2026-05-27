@@ -5,6 +5,8 @@ import { useState } from 'react';
 import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../supabase';
 
+const PERSONALITY_TRAITS = ['Energetic', 'Calm', 'Playful', 'Shy', 'Friendly', 'Loves other dogs', 'Protective', 'Lazy', 'Adventurous', 'Cuddly'];
+
 export default function ProfileSetup() {
   const [location, setLocation] = useState<{latitude: number, longitude: number} | null>(null);
   const [step, setStep] = useState(1);
@@ -17,11 +19,13 @@ export default function ProfileSetup() {
   const [dogName, setDogName] = useState('');
   const [dogBreed, setDogBreed] = useState('');
   const [dogAge, setDogAge] = useState('');
+  const [dogSize, setDogSize] = useState('Medium');
+  const [dogPhotos, setDogPhotos] = useState<string[]>([]);
+  const [dogPersonality, setDogPersonality] = useState<string[]>([]);
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
-  const [dogSize, setDogSize] = useState('Medium');
   const router = useRouter();
 
   const getLocation = async () => {
@@ -34,15 +38,11 @@ export default function ProfileSetup() {
     setLocation({ latitude: loc.coords.latitude, longitude: loc.coords.longitude });
   };
 
-  const pickImage = async () => {
-    if (photos.length >= 6) {
-      Alert.alert('Max photos', 'You can only add 6 photos');
-      return;
-    }
+  const uploadPhoto = async (bucket: string, prefix: string) => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('Permission needed', 'Please allow photo access in Settings');
-      return;
+      return null;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -50,21 +50,25 @@ export default function ProfileSetup() {
       aspect: [3, 4],
       quality: 0.7,
     });
-    if (result.canceled) return;
+    if (result.canceled) return null;
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return null;
+    const uri = result.assets[0].uri;
+    const fileName = `${prefix}_${user.id}_${Date.now()}.jpg`;
+    const response = await fetch(uri);
+    const arrayBuffer = await response.arrayBuffer();
+    const { error } = await supabase.storage.from(bucket).upload(fileName, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
+    if (error) throw new Error(error.message);
+    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(fileName);
+    return publicUrl;
+  };
+
+  const pickOwnerPhoto = async () => {
+    if (photos.length >= 4) { Alert.alert('Max photos', 'You can add up to 4 photos'); return; }
     setUploading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not logged in');
-      const uri = result.assets[0].uri;
-      const fileName = `${user.id}_${Date.now()}.jpg`;
-      const response = await fetch(uri);
-      const arrayBuffer = await response.arrayBuffer();
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(fileName, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
-      if (uploadError) throw new Error(uploadError.message);
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
-      setPhotos(prev => [...prev, publicUrl]);
+      const url = await uploadPhoto('avatars', 'owner');
+      if (url) setPhotos(prev => [...prev, url]);
     } catch (e: any) {
       Alert.alert('Upload failed', e.message);
     } finally {
@@ -72,35 +76,38 @@ export default function ProfileSetup() {
     }
   };
 
-  const removePhoto = (index: number) => {
-    setPhotos(prev => prev.filter((_, i) => i !== index));
+  const pickDogPhoto = async () => {
+    if (dogPhotos.length >= 4) { Alert.alert('Max photos', 'You can add up to 4 dog photos'); return; }
+    setUploading(true);
+    try {
+      const url = await uploadPhoto('avatars', 'dog');
+      if (url) setDogPhotos(prev => [...prev, url]);
+    } catch (e: any) {
+      Alert.alert('Upload failed', e.message);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const togglePersonality = (trait: string) => {
+    setDogPersonality(prev => prev.includes(trait) ? prev.filter(t => t !== trait) : [...prev, trait]);
   };
 
   const saveProfile = async () => {
-    if (photos.length < 6) {
-      Alert.alert('Add more photos', 'Please add 6 photos to continue');
-      return;
-    }
-    if (!gender) {
-      Alert.alert('Missing info', 'Please select your gender');
-      return;
-    }
+    if (photos.length < 4) { Alert.alert('Add more photos', 'Please add 4 owner photos'); return; }
+    if (!gender) { Alert.alert('Missing info', 'Please select your gender'); return; }
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
       const { error } = await supabase.from('profiles').upsert({
         id: user.id,
-        name,
-        age: parseInt(age),
-        bio,
-        neighborhood,
-        gender,
-        seeking,
-        dog_name: dogName,
-        dog_breed: dogBreed,
-        dog_age: parseInt(dogAge),
-        dog_size: dogSize,
+        name, age: parseInt(age), bio, neighborhood,
+        gender, seeking,
+        dog_name: dogName, dog_breed: dogBreed,
+        dog_age: parseInt(dogAge), dog_size: dogSize,
+        dog_photos: dogPhotos,
+        dog_personality: dogPersonality,
         latitude: location?.latitude,
         longitude: location?.longitude,
         last_active: new Date().toISOString(),
@@ -113,6 +120,30 @@ export default function ProfileSetup() {
       setLoading(false);
     }
   };
+
+  const PhotoGrid = ({ photoList, onAdd, onRemove, maxCount, emptyLabel }: any) => (
+    <View style={styles.photoGrid}>
+      {[0, 1, 2, 3].map(i => (
+        <TouchableOpacity
+          key={i}
+          style={styles.photoSlot}
+          activeOpacity={0.7}
+          onPress={() => photoList[i] ? onRemove(i) : onAdd()}>
+          {photoList[i] ? (
+            <>
+              <Image source={{ uri: photoList[i] }} style={styles.photoThumb} />
+              <View style={styles.removeBtn}><Text style={styles.removeBtnText}>×</Text></View>
+            </>
+          ) : (
+            <View style={styles.photoEmpty}>
+              <Text style={styles.photoEmptyIcon}>+</Text>
+              <Text style={styles.photoEmptyText}>{i === 0 ? emptyLabel : `photo ${i + 1}`}</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      ))}
+    </View>
+  );
 
   if (done) {
     return (
@@ -134,11 +165,11 @@ export default function ProfileSetup() {
     <View style={styles.container}>
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
         <Text style={styles.logo}>sulli</Text>
-        <Text style={styles.stepText}>step {step} of 3</Text>
+        <Text style={styles.stepText}>step {step} of 4</Text>
         <View style={styles.progressRow}>
-          <View style={[styles.progressBar, { flex: 1, backgroundColor: '#8B5E3C' }]} />
-          <View style={[styles.progressBar, { flex: 1, backgroundColor: step >= 2 ? '#8B5E3C' : '#E8D5B7' }]} />
-          <View style={[styles.progressBar, { flex: 1, backgroundColor: step === 3 ? '#8B5E3C' : '#E8D5B7' }]} />
+          {[1,2,3,4].map(s => (
+            <View key={s} style={[styles.progressBar, { flex: 1, backgroundColor: step >= s ? '#8B5E3C' : '#E8D5B7' }]} />
+          ))}
         </View>
 
         {step === 1 && (
@@ -154,10 +185,7 @@ export default function ProfileSetup() {
             <Text style={styles.label}>i am a</Text>
             <View style={styles.sizeRow}>
               {['Man', 'Woman', 'Non-binary'].map(g => (
-                <TouchableOpacity
-                  key={g}
-                  style={[styles.sizeBtn, gender === g && styles.sizeBtnActive]}
-                  onPress={() => setGender(g)}>
+                <TouchableOpacity key={g} style={[styles.sizeBtn, gender === g && styles.sizeBtnActive]} onPress={() => setGender(g)}>
                   <Text style={[styles.sizeBtnText, { color: gender === g ? '#8B5E3C' : '#8C7B68' }]}>{g}</Text>
                 </TouchableOpacity>
               ))}
@@ -166,10 +194,7 @@ export default function ProfileSetup() {
             <Text style={styles.label}>i want to meet</Text>
             <View style={styles.sizeRow}>
               {['Men', 'Women', 'Everyone'].map(s => (
-                <TouchableOpacity
-                  key={s}
-                  style={[styles.sizeBtn, seeking === s && styles.sizeBtnActive]}
-                  onPress={() => setSeeking(s)}>
+                <TouchableOpacity key={s} style={[styles.sizeBtn, seeking === s && styles.sizeBtnActive]} onPress={() => setSeeking(s)}>
                   <Text style={[styles.sizeBtnText, { color: seeking === s ? '#8B5E3C' : '#8C7B68' }]}>{s}</Text>
                 </TouchableOpacity>
               ))}
@@ -178,8 +203,8 @@ export default function ProfileSetup() {
             <Text style={styles.label}>your KC neighborhood</Text>
             <TextInput style={styles.input} value={neighborhood} onChangeText={setNeighborhood} placeholder="e.g. Brookside, Overland Park..." placeholderTextColor="#8C7B68" />
 
-            <Text style={styles.label}>about you and your pup</Text>
-            <TextInput style={[styles.input, { height: 100, textAlignVertical: 'top' }]} value={bio} onChangeText={setBio} placeholder="Tell people about yourself and your dog..." placeholderTextColor="#8C7B68" multiline />
+            <Text style={styles.label}>about you</Text>
+            <TextInput style={[styles.input, { height: 100, textAlignVertical: 'top' }]} value={bio} onChangeText={setBio} placeholder="Tell people about yourself..." placeholderTextColor="#8C7B68" multiline />
 
             <TouchableOpacity style={[styles.locationBtn, { backgroundColor: location ? '#DDE8D0' : 'white', borderColor: location ? '#7A8C6E' : '#E8D5B7' }]} onPress={getLocation}>
               <View style={styles.locationIcon}>
@@ -201,35 +226,41 @@ export default function ProfileSetup() {
         {step === 2 && (
           <View style={styles.form}>
             <Text style={styles.heading}>tell us about your pup</Text>
+
             <Text style={styles.label}>dog's name</Text>
             <TextInput style={styles.input} value={dogName} onChangeText={setDogName} placeholder="Dog's name" placeholderTextColor="#8C7B68" />
+
             <Text style={styles.label}>breed</Text>
             <TextInput style={styles.input} value={dogBreed} onChangeText={setDogBreed} placeholder="e.g. Golden Retriever mix" placeholderTextColor="#8C7B68" />
+
             <Text style={styles.label}>age</Text>
             <TextInput style={styles.input} value={dogAge} onChangeText={setDogAge} placeholder="Dog's age" placeholderTextColor="#8C7B68" keyboardType="numeric" />
+
             <Text style={styles.label}>dog size</Text>
             <View style={styles.sizeRow}>
               {['Small', 'Medium', 'Large'].map(size => (
-                <TouchableOpacity
-                  key={size}
-                  style={[styles.sizeBtn, dogSize === size && styles.sizeBtnActive]}
-                  onPress={() => setDogSize(size)}>
+                <TouchableOpacity key={size} style={[styles.sizeBtn, dogSize === size && styles.sizeBtnActive]} onPress={() => setDogSize(size)}>
                   <View style={styles.sizeDogIcon}>
-                    <View style={[styles.sizeDogBody, {
-                      width: size === 'Small' ? 16 : size === 'Medium' ? 22 : 28,
-                      height: size === 'Small' ? 12 : size === 'Medium' ? 16 : 20,
-                      borderColor: dogSize === size ? '#8B5E3C' : '#C4B8AC'
-                    }]} />
-                    <View style={[styles.sizeDogHead, {
-                      width: size === 'Small' ? 10 : size === 'Medium' ? 13 : 16,
-                      height: size === 'Small' ? 10 : size === 'Medium' ? 13 : 16,
-                      borderColor: dogSize === size ? '#8B5E3C' : '#C4B8AC'
-                    }]} />
+                    <View style={[styles.sizeDogBody, { width: size === 'Small' ? 16 : size === 'Medium' ? 22 : 28, height: size === 'Small' ? 12 : size === 'Medium' ? 16 : 20, borderColor: dogSize === size ? '#8B5E3C' : '#C4B8AC' }]} />
+                    <View style={[styles.sizeDogHead, { width: size === 'Small' ? 10 : size === 'Medium' ? 13 : 16, height: size === 'Small' ? 10 : size === 'Medium' ? 13 : 16, borderColor: dogSize === size ? '#8B5E3C' : '#C4B8AC' }]} />
                   </View>
                   <Text style={[styles.sizeBtnText, { color: dogSize === size ? '#8B5E3C' : '#8C7B68' }]}>{size}</Text>
                 </TouchableOpacity>
               ))}
             </View>
+
+            <Text style={styles.label}>personality traits</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+              {PERSONALITY_TRAITS.map(trait => (
+                <TouchableOpacity
+                  key={trait}
+                  style={{ paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, borderWidth: 1, borderColor: dogPersonality.includes(trait) ? '#8B5E3C' : '#E8D5B7', backgroundColor: dogPersonality.includes(trait) ? '#F7F2EA' : 'white' }}
+                  onPress={() => togglePersonality(trait)}>
+                  <Text style={{ fontSize: 13, color: dogPersonality.includes(trait) ? '#8B5E3C' : '#8C7B68', fontWeight: dogPersonality.includes(trait) ? '500' : '400' }}>{trait}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <TouchableOpacity style={styles.backBtn} onPress={() => setStep(1)}>
               <Text style={styles.backBtnText}>← back</Text>
             </TouchableOpacity>
@@ -241,42 +272,46 @@ export default function ProfileSetup() {
 
         {step === 3 && (
           <View style={styles.form}>
-            <Text style={styles.heading}>add your photos</Text>
-            <View style={styles.dogFirstBanner}>
-              <Text style={styles.dogFirstText}>make your dog the first photo!</Text>
-            </View>
-            <Text style={styles.photoSubtitle}>all 6 photos are required to continue</Text>
-            <View style={styles.photoGrid}>
-              {[0, 1, 2, 3, 4, 5].map((i) => (
-                <TouchableOpacity
-                  key={i}
-                  style={styles.photoSlot}
-                  activeOpacity={0.7}
-                  onPress={() => { if (photos[i]) { removePhoto(i); } else { pickImage(); } }}>
-                  {photos[i] ? (
-                    <>
-                      <Image source={{ uri: photos[i] }} style={styles.photoThumb} />
-                      {i === 0 && <View style={styles.firstBadge}><Text style={styles.firstBadgeText}>first</Text></View>}
-                      <View style={styles.removeBtn}><Text style={styles.removeBtnText}>×</Text></View>
-                    </>
-                  ) : (
-                    <View style={styles.photoEmpty}>
-                      <Text style={styles.photoEmptyIcon}>+</Text>
-                      <Text style={styles.photoEmptyText}>{i === 0 ? 'your dog' : `photo ${i + 1}`}</Text>
-                    </View>
-                  )}
-                </TouchableOpacity>
-              ))}
-            </View>
+            <Text style={styles.heading}>pup photos</Text>
+            <Text style={styles.photoSubtitle}>add up to 4 photos of {dogName || 'your dog'}</Text>
+            <PhotoGrid
+              photoList={dogPhotos}
+              onAdd={pickDogPhoto}
+              onRemove={(i: number) => setDogPhotos(prev => prev.filter((_, idx) => idx !== i))}
+              maxCount={4}
+              emptyLabel="dog photo"
+            />
             {uploading && <Text style={styles.uploadingText}>uploading...</Text>}
-            <Text style={styles.photoCount}>{photos.length} of 6 photos added</Text>
+            <Text style={styles.photoCount}>{dogPhotos.length} of 4 photos added</Text>
             <TouchableOpacity style={styles.backBtn} onPress={() => setStep(2)}>
               <Text style={styles.backBtnText}>← back</Text>
             </TouchableOpacity>
+            <TouchableOpacity style={styles.button} onPress={() => setStep(4)}>
+              <Text style={styles.buttonText}>next</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {step === 4 && (
+          <View style={styles.form}>
+            <Text style={styles.heading}>your photos</Text>
+            <Text style={styles.photoSubtitle}>add 4 photos of yourself</Text>
+            <PhotoGrid
+              photoList={photos}
+              onAdd={pickOwnerPhoto}
+              onRemove={(i: number) => setPhotos(prev => prev.filter((_, idx) => idx !== i))}
+              maxCount={4}
+              emptyLabel="your photo"
+            />
+            {uploading && <Text style={styles.uploadingText}>uploading...</Text>}
+            <Text style={styles.photoCount}>{photos.length} of 4 photos added</Text>
+            <TouchableOpacity style={styles.backBtn} onPress={() => setStep(3)}>
+              <Text style={styles.backBtnText}>← back</Text>
+            </TouchableOpacity>
             <TouchableOpacity
-              style={[styles.button, photos.length < 6 && styles.buttonDisabled]}
+              style={[styles.button, photos.length < 4 && styles.buttonDisabled]}
               onPress={saveProfile}
-              disabled={loading || photos.length < 6}>
+              disabled={loading || photos.length < 4}>
               <Text style={styles.buttonText}>{loading ? 'saving...' : "let's go"}</Text>
             </TouchableOpacity>
           </View>
@@ -295,7 +330,7 @@ const styles = StyleSheet.create({
   progressBar: { height: 4, borderRadius: 2 },
   form: { width: '100%' },
   heading: { fontSize: 28, color: '#2C2016', fontWeight: '300', marginBottom: 8 },
-  photoSubtitle: { fontSize: 13, color: '#8C7B68', marginBottom: 20 },
+  photoSubtitle: { fontSize: 13, color: '#8C7B68', marginBottom: 16 },
   label: { fontSize: 12, color: '#8C7B68', marginBottom: 6, marginTop: 12, textTransform: 'uppercase', letterSpacing: 1 },
   input: { backgroundColor: 'white', borderRadius: 14, padding: 14, fontSize: 15, color: '#2C2016', borderWidth: 1, borderColor: '#E8D5B7' },
   button: { backgroundColor: '#8B5E3C', borderRadius: 16, padding: 16, alignItems: 'center', marginTop: 24 },
@@ -316,7 +351,7 @@ const styles = StyleSheet.create({
   sizeDogHead: { borderWidth: 1.5, borderRadius: 8, position: 'absolute', top: 0, right: 0 },
   sizeBtnText: { fontSize: 11, fontWeight: '500' },
   photoGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 16 },
-  photoSlot: { width: '30%', aspectRatio: 1, borderRadius: 12, overflow: 'hidden', position: 'relative' },
+  photoSlot: { width: '47%', aspectRatio: 3/4, borderRadius: 12, overflow: 'hidden', position: 'relative' },
   photoThumb: { width: '100%', height: '100%' },
   photoEmpty: { width: '100%', height: '100%', backgroundColor: 'white', borderWidth: 1.5, borderColor: '#E8D5B7', borderStyle: 'dashed', borderRadius: 12, alignItems: 'center', justifyContent: 'center', gap: 4 },
   photoEmptyIcon: { fontSize: 24, color: '#C8956C' },
@@ -325,8 +360,6 @@ const styles = StyleSheet.create({
   removeBtnText: { color: 'white', fontSize: 14, fontWeight: '300' },
   uploadingText: { fontSize: 13, color: '#8B5E3C', textAlign: 'center', marginBottom: 8 },
   photoCount: { fontSize: 12, color: '#8C7B68', textAlign: 'center', marginBottom: 8 },
-  firstBadge: { position: 'absolute', bottom: 4, left: 4, backgroundColor: '#8B5E3C', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
-  firstBadgeText: { fontSize: 9, color: 'white', fontWeight: '500' },
   dogFirstBanner: { backgroundColor: '#DDE8D0', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#B8C8A8', alignItems: 'center' },
   dogFirstText: { fontSize: 13, color: '#1A3D0C', fontWeight: '500' },
   doneScreen: { flex: 1, backgroundColor: '#8B5E3C', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 },
