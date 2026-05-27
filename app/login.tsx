@@ -48,7 +48,6 @@ export default function LoginScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.paw}>🐾</Text>
       <Text style={styles.logo}>sulli</Text>
       <Text style={styles.tagline}>dates with your best friend</Text>
       <View style={styles.form}>

@@ -39,15 +39,9 @@ const slides = [
 ];
 
 function SlideIcon({ type, color }: { type: string; color: string }) {
-  const s = { borderColor: color, borderWidth: 2 };
-
   if (type === 'logo') return (
-    <View style={{ alignItems: 'center', justifyContent: 'center', width: 120, height: 120 }}>
-      <View style={{ width: 80, height: 80, borderRadius: 40, borderWidth: 2.5, borderColor: color }} />
-      <View style={{ position: 'absolute', width: 28, height: 28, borderRadius: 14, borderWidth: 2.5, borderColor: color, top: 14 }} />
-      <View style={{ position: 'absolute', bottom: 12, width: 60, height: 30, borderTopLeftRadius: 30, borderTopRightRadius: 30, borderWidth: 2.5, borderBottomWidth: 0, borderColor: color }} />
-    </View>
-  );
+  <View style={{ width: 120, height: 120 }} />
+);
 
   if (type === 'swipe') return (
     <View style={{ alignItems: 'center', justifyContent: 'center', width: 120, height: 120, gap: 12 }}>
@@ -82,10 +76,10 @@ function SlideIcon({ type, color }: { type: string; color: string }) {
 
   if (type === 'shield') return (
     <View style={{ alignItems: 'center', justifyContent: 'center', width: 120, height: 120 }}>
-      <View style={{ width: 70, height: 80, borderTopLeftRadius: 35, borderTopRightRadius: 35, borderBottomLeftRadius: 12, borderBottomRightRadius: 12, borderWidth: 2.5, borderColor: color, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-        <View style={{ width: 24, height: 24, borderRadius: 12, borderWidth: 2, borderColor: color }} />
-        <View style={{ width: 36, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
-        <View style={{ width: 28, height: 1.5, backgroundColor: color, borderRadius: 1 }} />
+      <View style={{ width: 44, height: 24, borderRadius: 8, borderWidth: 2.5, borderColor: color, marginBottom: -3, zIndex: 1 }} />
+      <View style={{ width: 64, height: 64, borderRadius: 10, borderWidth: 2.5, borderColor: color, alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+        <View style={{ width: 20, height: 20, borderRadius: 10, borderWidth: 2.5, borderColor: color }} />
+        <View style={{ width: 3, height: 16, backgroundColor: color, borderRadius: 2 }} />
       </View>
     </View>
   );

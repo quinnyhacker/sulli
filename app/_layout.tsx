@@ -12,8 +12,8 @@ export default function RootLayout() {
   useEffect(() => {
     const init = async () => {
       try {
+        await AsyncStorage.removeItem('onboarded');
         const onboarded = await AsyncStorage.getItem('onboarded');
-        console.log('onboarded:', onboarded);
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           setTimeout(() => router.replace(onboarded ? '/login' : '/onboarding'), 500);

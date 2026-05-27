@@ -12,10 +12,11 @@ export default function ProfileSetup() {
   const [age, setAge] = useState('');
   const [bio, setBio] = useState('');
   const [neighborhood, setNeighborhood] = useState('');
+  const [gender, setGender] = useState('');
+  const [seeking, setSeeking] = useState('Everyone');
   const [dogName, setDogName] = useState('');
   const [dogBreed, setDogBreed] = useState('');
   const [dogAge, setDogAge] = useState('');
-  const [dogEmoji, setDogEmoji] = useState('🐕');
   const [photos, setPhotos] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -38,22 +39,22 @@ export default function ProfileSetup() {
       Alert.alert('Max photos', 'You can only add 6 photos');
       return;
     }
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      Alert.alert('Permission needed', 'Please allow access to your photos');
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('Permission needed', 'Please allow photo access in Settings');
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
-      aspect: [4, 3],
+      aspect: [3, 4],
       quality: 0.7,
     });
     if (result.canceled) return;
     setUploading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) throw new Error('Not logged in');
       const uri = result.assets[0].uri;
       const fileName = `${user.id}_${Date.now()}.jpg`;
       const response = await fetch(uri);
@@ -61,11 +62,11 @@ export default function ProfileSetup() {
       const { error: uploadError } = await supabase.storage
         .from('avatars')
         .upload(fileName, arrayBuffer, { contentType: 'image/jpeg', upsert: true });
-      if (uploadError) { Alert.alert('Upload error', uploadError.message); return; }
+      if (uploadError) throw new Error(uploadError.message);
       const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(fileName);
       setPhotos(prev => [...prev, publicUrl]);
     } catch (e: any) {
-      Alert.alert('Error', e.message || JSON.stringify(e));
+      Alert.alert('Upload failed', e.message);
     } finally {
       setUploading(false);
     }
@@ -80,6 +81,10 @@ export default function ProfileSetup() {
       Alert.alert('Add more photos', 'Please add 6 photos to continue');
       return;
     }
+    if (!gender) {
+      Alert.alert('Missing info', 'Please select your gender');
+      return;
+    }
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -90,23 +95,21 @@ export default function ProfileSetup() {
         age: parseInt(age),
         bio,
         neighborhood,
+        gender,
+        seeking,
         dog_name: dogName,
         dog_breed: dogBreed,
         dog_age: parseInt(dogAge),
-        dog_emoji: dogEmoji,
         dog_size: dogSize,
         latitude: location?.latitude,
         longitude: location?.longitude,
+        last_active: new Date().toISOString(),
         photos,
       });
-      if (error) {
-        Alert.alert('Error', JSON.stringify(error));
-        setLoading(false);
-      } else {
-        setDone(true);
-      }
+      if (error) throw new Error(JSON.stringify(error));
+      setDone(true);
     } catch (e: any) {
-      Alert.alert('Error', e.message || JSON.stringify(e));
+      Alert.alert('Error', e.message);
       setLoading(false);
     }
   };
@@ -129,8 +132,8 @@ export default function ProfileSetup() {
 
   return (
     <View style={styles.container}>
-      <ScrollView contentContainerStyle={styles.scroll}>
-        <Text style={styles.logo}>sulli 🐾</Text>
+      <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
+        <Text style={styles.logo}>sulli</Text>
         <Text style={styles.stepText}>step {step} of 3</Text>
         <View style={styles.progressRow}>
           <View style={[styles.progressBar, { flex: 1, backgroundColor: '#8B5E3C' }]} />
@@ -141,14 +144,43 @@ export default function ProfileSetup() {
         {step === 1 && (
           <View style={styles.form}>
             <Text style={styles.heading}>tell us about you</Text>
+
             <Text style={styles.label}>your first name</Text>
             <TextInput style={styles.input} value={name} onChangeText={setName} placeholder="Name" placeholderTextColor="#8C7B68" />
+
             <Text style={styles.label}>your age</Text>
             <TextInput style={styles.input} value={age} onChangeText={setAge} placeholder="Age" placeholderTextColor="#8C7B68" keyboardType="numeric" />
+
+            <Text style={styles.label}>i am a</Text>
+            <View style={styles.sizeRow}>
+              {['Man', 'Woman', 'Non-binary'].map(g => (
+                <TouchableOpacity
+                  key={g}
+                  style={[styles.sizeBtn, gender === g && styles.sizeBtnActive]}
+                  onPress={() => setGender(g)}>
+                  <Text style={[styles.sizeBtnText, { color: gender === g ? '#8B5E3C' : '#8C7B68' }]}>{g}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <Text style={styles.label}>i want to meet</Text>
+            <View style={styles.sizeRow}>
+              {['Men', 'Women', 'Everyone'].map(s => (
+                <TouchableOpacity
+                  key={s}
+                  style={[styles.sizeBtn, seeking === s && styles.sizeBtnActive]}
+                  onPress={() => setSeeking(s)}>
+                  <Text style={[styles.sizeBtnText, { color: seeking === s ? '#8B5E3C' : '#8C7B68' }]}>{s}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <Text style={styles.label}>your KC neighborhood</Text>
             <TextInput style={styles.input} value={neighborhood} onChangeText={setNeighborhood} placeholder="e.g. Brookside, Overland Park..." placeholderTextColor="#8C7B68" />
+
             <Text style={styles.label}>about you and your pup</Text>
             <TextInput style={[styles.input, { height: 100, textAlignVertical: 'top' }]} value={bio} onChangeText={setBio} placeholder="Tell people about yourself and your dog..." placeholderTextColor="#8C7B68" multiline />
+
             <TouchableOpacity style={[styles.locationBtn, { backgroundColor: location ? '#DDE8D0' : 'white', borderColor: location ? '#7A8C6E' : '#E8D5B7' }]} onPress={getLocation}>
               <View style={styles.locationIcon}>
                 <View style={[styles.locationCircle, { borderColor: location ? '#3B6D11' : '#8B5E3C' }]} />
@@ -159,6 +191,7 @@ export default function ProfileSetup() {
               </Text>
               {location && <Text style={{ color: '#3B6D11', fontSize: 12 }}>✓</Text>}
             </TouchableOpacity>
+
             <TouchableOpacity style={styles.button} onPress={() => setStep(2)}>
               <Text style={styles.buttonText}>next</Text>
             </TouchableOpacity>
@@ -210,27 +243,21 @@ export default function ProfileSetup() {
           <View style={styles.form}>
             <Text style={styles.heading}>add your photos</Text>
             <View style={styles.dogFirstBanner}>
-              <View style={styles.dogFirstIcon}>
-                <View style={{ width: 14, height: 10, borderRadius: 5, borderWidth: 1.5, borderColor: '#3B6D11' }} />
-                <View style={{ position: 'absolute', top: -3, right: 1, width: 8, height: 8, borderRadius: 4, borderWidth: 1.5, borderColor: '#3B6D11' }} />
-              </View>
               <Text style={styles.dogFirstText}>make your dog the first photo!</Text>
             </View>
             <Text style={styles.photoSubtitle}>all 6 photos are required to continue</Text>
             <View style={styles.photoGrid}>
               {[0, 1, 2, 3, 4, 5].map((i) => (
-                <TouchableOpacity key={i} style={styles.photoSlot} onPress={() => photos[i] ? removePhoto(i) : pickImage()}>
+                <TouchableOpacity
+                  key={i}
+                  style={styles.photoSlot}
+                  activeOpacity={0.7}
+                  onPress={() => { if (photos[i]) { removePhoto(i); } else { pickImage(); } }}>
                   {photos[i] ? (
                     <>
                       <Image source={{ uri: photos[i] }} style={styles.photoThumb} />
-                      {i === 0 && (
-                        <View style={styles.firstBadge}>
-                          <Text style={styles.firstBadgeText}>first</Text>
-                        </View>
-                      )}
-                      <View style={styles.removeBtn}>
-                        <Text style={styles.removeBtnText}>×</Text>
-                      </View>
+                      {i === 0 && <View style={styles.firstBadge}><Text style={styles.firstBadgeText}>first</Text></View>}
+                      <View style={styles.removeBtn}><Text style={styles.removeBtnText}>×</Text></View>
                     </>
                   ) : (
                     <View style={styles.photoEmpty}>
@@ -300,9 +327,8 @@ const styles = StyleSheet.create({
   photoCount: { fontSize: 12, color: '#8C7B68', textAlign: 'center', marginBottom: 8 },
   firstBadge: { position: 'absolute', bottom: 4, left: 4, backgroundColor: '#8B5E3C', borderRadius: 6, paddingHorizontal: 6, paddingVertical: 2 },
   firstBadgeText: { fontSize: 9, color: 'white', fontWeight: '500' },
-  dogFirstBanner: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#DDE8D0', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#B8C8A8' },
-  dogFirstIcon: { width: 24, height: 20, position: 'relative', alignItems: 'center', justifyContent: 'flex-end' },
-  dogFirstText: { fontSize: 13, color: '#1A3D0C', fontWeight: '500', flex: 1 },
+  dogFirstBanner: { backgroundColor: '#DDE8D0', borderRadius: 12, padding: 12, marginBottom: 12, borderWidth: 1, borderColor: '#B8C8A8', alignItems: 'center' },
+  dogFirstText: { fontSize: 13, color: '#1A3D0C', fontWeight: '500' },
   doneScreen: { flex: 1, backgroundColor: '#8B5E3C', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 40 },
   doneIcon: { width: 80, height: 80, position: 'relative', alignItems: 'center', justifyContent: 'center' },
   doneCircle: { width: 72, height: 72, borderRadius: 36, borderWidth: 2.5, borderColor: 'rgba(255,255,255,0.8)' },
